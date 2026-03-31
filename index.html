@@ -15,7 +15,7 @@
     --suspicion:#c8380a; --money:#c8a000; --moro:#5a8aaa; --skull:#9a6aaa;
   }
 
-  *{box-sizing:border-box;margin:0;padding:0;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;}
   body{background:var(--bg);color:var(--text);font-family:'Courier Prime',monospace;font-size:14px;
     height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
   body::before{content:'';position:fixed;inset:0;
@@ -79,9 +79,11 @@
   #customer-panel{border-bottom:1px solid var(--border);padding:8px 10px;background:var(--bg);min-height:90px;}
   #customer-panel h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;}
   #customer-name{font-family:'Special Elite',serif;font-size:13px;color:var(--accent);margin-bottom:3px;}
+  #customer-type{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
   #customer-request{font-size:11px;color:var(--text);font-style:italic;line-height:1.4;}
   #inventory-panel{flex:1;padding:8px 10px;overflow-y:auto;}
   #inventory-panel h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+  .side-subhead{margin-top:10px;}
   .inv-item{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;padding:4px 7px;
     background:var(--panel2);border:1px solid var(--border);cursor:pointer;transition:border-color 0.15s,background 0.15s;font-size:11px;}
   .inv-item:hover{border-color:var(--accent);background:#1a1008;}
@@ -89,6 +91,12 @@
   .inv-item.disabled{opacity:0.3;cursor:not-allowed;}
   .inv-name{color:var(--text-bright);} .inv-count{font-family:'Special Elite',serif;color:var(--accent2);font-size:14px;}
   .inv-price{font-size:9px;color:var(--text-dim);margin-top:1px;}
+  .side-list{display:flex;flex-direction:column;gap:5px;}
+  .side-item{display:flex;justify-content:space-between;align-items:center;padding:4px 7px;border:1px solid var(--border);
+    background:var(--panel2);font-size:10px;line-height:1.4;}
+  .side-item-name{color:var(--text);}
+  .side-item-value{font-family:'Special Elite',serif;color:var(--text-bright);font-size:12px;}
+  .side-empty{padding:4px 2px;color:var(--text-dim);font-size:10px;font-style:italic;}
 
   /* BOTTOM */
   #bottombar{border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;
@@ -128,6 +136,12 @@
   .price-menu-alert{font-size:10px;color:var(--accent);}
   .price-menu-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
   .price-btn{padding:4px 8px;min-width:32px;text-align:center;}
+  .upgrade-menu-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+    padding:10px;border:1px solid var(--border);background:var(--panel2);margin-bottom:8px;}
+  .upgrade-menu-name{font-family:'Special Elite',serif;font-size:14px;color:var(--text-bright);margin-bottom:3px;}
+  .upgrade-menu-desc{font-size:10px;line-height:1.6;color:var(--text);}
+  .upgrade-menu-cost{font-size:10px;color:var(--money);margin-top:3px;}
+  .upgrade-menu-status{font-size:10px;color:var(--green-bright);margin-top:3px;}
 
   /* OVERLAY */
   #overlay{display:none;position:absolute;inset:0;background:rgba(5,3,2,0.97);z-index:100;
@@ -217,6 +231,10 @@
     .price-menu-controls{
       width:100%;
       justify-content:flex-start;
+    }
+
+    .upgrade-menu-row{
+      flex-direction:column;
     }
 
     #main{
@@ -395,11 +413,16 @@
       <div id="customer-panel">
         <h3 data-t="lbl_customer"></h3>
         <div id="customer-name">—</div>
+        <div id="customer-type"></div>
         <div id="customer-request"></div>
       </div>
       <div id="inventory-panel">
         <h3 data-t="lbl_inventory"></h3>
         <div id="inv-list"></div>
+        <h3 class="side-subhead" data-t="lbl_supplies"></h3>
+        <div id="supply-list" class="side-list"></div>
+        <h3 class="side-subhead" data-t="lbl_upgrades"></h3>
+        <div id="upgrade-list" class="side-list"></div>
       </div>
     </div>
   </div>
@@ -410,6 +433,7 @@
       <button class="btn btn-primary" id="btn-sell" onclick="sellSelected()" data-t="btn_sell"></button>
       <button class="btn" id="btn-skip-cust" onclick="skipCustomer()" data-t="btn_skip"></button>
       <button class="btn" id="btn-price-menu" onclick="openPriceMenu()" data-t="btn_prices"></button>
+      <button class="btn" id="btn-upgrades" onclick="openUpgradeMenu()" data-t="btn_upgrades"></button>
       <button class="btn" id="btn-end-day" onclick="endDay()" data-t="btn_end_day"></button>
       <button class="btn btn-moro" id="btn-visit-moro" onclick="visitMoro()" style="display:none;" data-t="btn_visit_moro"></button>
     </div>
@@ -466,8 +490,8 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
 <span style="color:var(--text-dim);font-size:11px;">Mr. Skull needs you. Dr. Moro can save you.<br>The question is which deal costs more.</span>`,
     btn_open_shop:'OPEN SHOP',
     lbl_money:'Money', lbl_suspicion:'Suspicion', lbl_moro_goal:'Dr. Moro', lbl_infected:'Infected',
-    lbl_customer:'Current Customer', lbl_inventory:'Inventory',
-    btn_sell:'Sell', btn_skip:'Skip', btn_prices:'Prices', btn_end_day:'End Day →', btn_visit_moro:'Visit Dr. Moro', btn_restart:'Start Over',
+    lbl_customer:'Current Customer', lbl_inventory:'Inventory', lbl_supplies:'Hunt Supplies', lbl_upgrades:'Upgrades',
+    btn_sell:'Sell', btn_skip:'Skip', btn_prices:'Prices', btn_upgrades:'Upgrades', btn_end_day:'End Day →', btn_visit_moro:'Visit Dr. Moro', btn_restart:'Start Over',
     night_hunt_title:'🔪 Hunt', night_hunt_desc:'Get supply. +Suspicion.',
     night_trade_title:'💰 Trade', night_trade_desc:'Sell organs. +Money.',
     night_hide_title:'🌑 Lay Low', night_hide_desc:'Clean up. −Suspicion.',
@@ -479,6 +503,15 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
     price_menu_current:'Now',
     price_menu_reset:'Reset',
     price_menu_close:'Close',
+    upgrade_menu_title:'Workshop',
+    upgrade_menu_close:'Close',
+    upgrade_buy:'Buy',
+    upgrade_owned:'Installed',
+    upgrade_need:'Need',
+    upgrade_level:'Level',
+    upgrade_next_cost:'Next cost',
+    no_supplies:'No scavenged supplies yet.',
+    no_upgrades:'No improvements installed.',
     inv_normal:'Normal Meat', inv_infected:'Infected Meat', inv_human:'★ Special Cut',
     no_one:'—', no_line:'No one in line.', shop_closed:'— Shop Closed —', city_sleeps:'The city sleeps. Mostly.',
     hint_sell:'Select meat, then Sell.', hint_no_cust:'No more customers.', hint_night:'Choose tonight\'s action.',
@@ -495,8 +528,8 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
 <span style="color:var(--text-dim);font-size:11px;">Мистер Скулл нуждается в тебе. Доктор Моро может тебя спасти.<br>Вопрос в том, какая сделка обойдётся дороже.</span>`,
     btn_open_shop:'ОТКРЫТЬ ЛАВКУ',
     lbl_money:'Деньги', lbl_suspicion:'Подозрение', lbl_moro_goal:'Д-р Моро', lbl_infected:'Заражено',
-    lbl_customer:'Покупатель', lbl_inventory:'Запасы',
-    btn_sell:'Продать', btn_skip:'Пропустить', btn_prices:'Цены', btn_end_day:'Конец дня →', btn_visit_moro:'К доктору Моро', btn_restart:'Начать заново',
+    lbl_customer:'Покупатель', lbl_inventory:'Запасы', lbl_supplies:'Трофеи охоты', lbl_upgrades:'Улучшения',
+    btn_sell:'Продать', btn_skip:'Пропустить', btn_prices:'Цены', btn_upgrades:'Улучшения', btn_end_day:'Конец дня →', btn_visit_moro:'К доктору Моро', btn_restart:'Начать заново',
     night_hunt_title:'🔪 Охота', night_hunt_desc:'Пополнить запас. +Подозрение.',
     night_trade_title:'💰 Торговля', night_trade_desc:'Продать органы. +Деньги.',
     night_hide_title:'🌑 Залечь', night_hide_desc:'Убраться. −Подозрение.',
@@ -508,6 +541,15 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
     price_menu_current:'Сейчас',
     price_menu_reset:'Сброс',
     price_menu_close:'Закрыть',
+    upgrade_menu_title:'Мастерская',
+    upgrade_menu_close:'Закрыть',
+    upgrade_buy:'Купить',
+    upgrade_owned:'Установлено',
+    upgrade_need:'Нужно',
+    upgrade_level:'Уровень',
+    upgrade_next_cost:'След. цена',
+    no_supplies:'Пока нет охотничьих припасов.',
+    no_upgrades:'Улучшения ещё не установлены.',
     inv_normal:'Обычное мясо', inv_infected:'Заражённое мясо', inv_human:'★ Особый срез',
     no_one:'—', no_line:'Никого в очереди.', shop_closed:'— Лавка закрыта —', city_sleeps:'Город спит. Почти.',
     hint_sell:'Выбери мясо, затем Продать.', hint_no_cust:'Покупателей больше нет.', hint_night:'Выбери действие на ночь.',
@@ -532,7 +574,7 @@ function applyLang(){
   G.inventory.normal.name   = t('inv_normal');
   G.inventory.infected.name = t('inv_infected');
   G.inventory.human.name    = t('inv_human');
-  if(G.phase) { renderInventory(); renderCustomer(); updateSceneHeader(); updateMoroBar(); }
+  if(G.phase) { updateUI(); }
 }
 function setLang(l){ LANG=l; applyLang(); }
 function toggleLang(){ setLang(LANG==='en'?'ru':'en'); }
@@ -597,6 +639,141 @@ const MORO_GOALS = MORO_COSTS.reduce((totals,cost)=>{
   return totals;
 },[]);
 const MARKET_SWINGS = {normal:2, infected:1, human:4};
+const SUPPLY_DEFS = {
+  larve_gland:{en:'LARVE Gland', ru:'Железа LARVE'},
+  sterile_kit:{en:'Sterile Kit', ru:'Стерильный набор'},
+  zt_pass:{en:'ZonTech Passcard', ru:'Пропуск ZonTech'},
+  cryo_vial:{en:'Cryo Vial', ru:'Крио-ампула'},
+  neural_fibers:{en:'Neural Fibers', ru:'Нейронные волокна'},
+  amber_serum:{en:'Amber Serum', ru:'Янтарная сыворотка'},
+};
+const MORO_REQUIREMENTS = {
+  1:{larve_gland:1, sterile_kit:1},
+  2:{zt_pass:1, cryo_vial:1},
+  3:{neural_fibers:1, amber_serum:1},
+};
+const CUSTOMER_TYPES = {
+  regular:{
+    label:{en:'Regular',ru:'Постоянник'},
+    budgets:[9,13],
+    prefs:['normal','fresh'],
+    lines:{
+      en:{
+        normal:['"Same cut as last time, Ray."','"The usual. Don\'t overthink it."'],
+        fresh:['"Give me something fresh. Proper fresh."'],
+      },
+      ru:{
+        normal:['"Как в прошлый раз, Рэй."','"Обычный кусок. Без выкрутасов."'],
+        fresh:['"Дай что-нибудь свежее. По-настоящему свежее."'],
+      }
+    },
+    memory:{
+      good:{en:'"You kept it honest before. Keep it that way."',ru:'"В прошлый раз ты не мухлевал. Так и держи."'},
+      bad:{en:'"No games today. I remember last time."',ru:'"Сегодня без фокусов. Я помню прошлый раз."'},
+    }
+  },
+  scavenger:{
+    label:{en:'Scavenger',ru:'Мародёр'},
+    budgets:[5,8],
+    prefs:['cheap','bulk'],
+    lines:{
+      en:{
+        cheap:['"Anything cheap. I\'m not proud."'],
+        bulk:['"Need volume, not quality."'],
+      },
+      ru:{
+        cheap:['"Что подешевле. Мне не до гордости."'],
+        bulk:['"Нужно побольше, не получше."'],
+      }
+    },
+    memory:{
+      good:{en:'"You kept me fed last week."',ru:'"На прошлой неделе ты меня не подвёл."'},
+      bad:{en:'"If you gouge me again, I walk."',ru:'"Ещё раз заломишь цену — я уйду."'},
+    }
+  },
+  ghoul:{
+    label:{en:'Ghoul',ru:'Гуль'},
+    budgets:[12,18],
+    prefs:['special','normal'],
+    lines:{
+      en:{
+        special:['"Something with a little character."'],
+        normal:['"I can make do with the usual. For now."'],
+      },
+      ru:{
+        special:['"Хочется чего-нибудь с характером."'],
+        normal:['"Пока сойдёт и обычное."'],
+      }
+    },
+    memory:{
+      good:{en:'"You know my taste by now."',ru:'"Ты уже знаешь мой вкус."'},
+      bad:{en:'"Disappoint me again and I bite."',ru:'"Ещё раз разочаруешь — укушу."'},
+    }
+  },
+  zontech:{
+    label:{en:'ZonTech Clerk',ru:'Клерк ZonTech'},
+    budgets:[11,17],
+    prefs:['fresh','normal'],
+    lines:{
+      en:{
+        fresh:['"Official rations are inedible. Fresh meat, if you have it."'],
+        normal:['"Nothing unusual. I just need dinner."'],
+      },
+      ru:{
+        fresh:['"Официальные пайки несъедобны. Мне бы свежего мяса."'],
+        normal:['"Ничего необычного. Мне просто нужен ужин."'],
+      }
+    },
+    memory:{
+      good:{en:'"I appreciate professionalism."',ru:'"Ценю профессионализм."'},
+      bad:{en:'"I notice details, butcher."',ru:'"Я замечаю детали, мясник."'},
+    }
+  },
+  smuggler:{
+    label:{en:'Smuggler',ru:'Контрабандист'},
+    budgets:[14,22],
+    prefs:['any','special'],
+    lines:{
+      en:{
+        any:['"Sell me something I can move fast."'],
+        special:['"Need a premium cut for a private buyer."'],
+      },
+      ru:{
+        any:['"Продай то, что можно быстро сбыть."'],
+        special:['"Нужен редкий кусок для частного покупателя."'],
+      }
+    },
+    memory:{
+      good:{en:'"Fair trade makes repeat business."',ru:'"Честная сделка возвращает клиента."'},
+      bad:{en:'"Burn me twice and I vanish."',ru:'"Обожжёшь дважды — я исчезну."'},
+    }
+  },
+};
+const UPGRADE_DEFS = {
+  street_sign:{
+    cost:90,
+    label:{en:'Neon Street Sign',ru:'Неоновая вывеска'},
+    desc:{en:'+1 customer per day. Returning patrons show up more often.',ru:'+1 клиент в день. Постоянники чаще возвращаются.'},
+  },
+  cold_room:{
+    cost:140,
+    label:{en:'Cold Room',ru:'Холодная комната'},
+    desc:{en:'+1 normal meat on restock days.',ru:'+1 обычное мясо в дни пополнения.'},
+  },
+  sanitary_seal:{
+    cost:120,
+    label:{en:'Sanitary Seal',ru:'Санитарная защита'},
+    desc:{en:'Reduces daily suspicion buildup from dirty business.',ru:'Снижает ежедневный рост подозрения от грязной работы.'},
+  },
+  hunter_pack:{
+    cost:160,
+    label:{en:'Hunter Pack',ru:'Охотничий набор'},
+    desc:{en:'Successful hunts find more meat and extra supplies more often.',ru:'Успешная охота приносит больше мяса и чаще даёт трофеи.'},
+  },
+};
+const SUPPLY_KEYS = Object.keys(SUPPLY_DEFS);
+const UPGRADE_KEYS = Object.keys(UPGRADE_DEFS);
+const CUSTOMER_TYPE_KEYS = Object.keys(CUSTOMER_TYPES);
 
 // ══════════════════════════════════════════
 //  STATE
@@ -610,6 +787,16 @@ const G = {
     normal:  {name:'Normal Meat',  count:8,  price:8,  basePrice:8,  defaultPrice:8,  infects:false, unlocked:true},
     infected:{name:'Infected Meat',count:4,  price:5,  basePrice:5,  defaultPrice:5,  infects:true,  unlocked:true},
     human:   {name:'★ Special Cut',count:0,  price:20, basePrice:20, defaultPrice:20, infects:true,  unlocked:false},
+  },
+  supplies:{
+    larve_gland:0, sterile_kit:0, zt_pass:0, cryo_vial:0, neural_fibers:0, amber_serum:0,
+  },
+  upgrades:{
+    street_sign:0, cold_room:0, sanitary_seal:0, hunter_pack:0,
+  },
+  patrons:[],
+  storyFlags:{
+    satchelEventDone:false,
   },
   customers:[], currentCustomer:null,
   customersServed:0, customersTotal:0,
@@ -654,7 +841,7 @@ function updateUI(){
   document.getElementById('btn-skull-order').style.display = (G.act>=2&&G.skullOrderReady)?'block':'none';
   document.getElementById('btn-visit-moro').style.display  = (G.moroStage>=1&&G.moroStage<4)?'inline-block':'none';
 
-  updateMoroBar(); updateSceneHeader(); renderInventory(); renderCustomer();
+  updateMoroBar(); updateSceneHeader(); renderInventory(); renderSupplies(); renderUpgradeList(); renderCustomer();
 }
 
 function normalizeSelectedMeat(){
@@ -717,6 +904,245 @@ function updateMoroBar(){
   document.getElementById('moro-stage-label').textContent=t('moro_stages')[Math.min(G.moroStage-1,3)];
 }
 
+function randInt(min,max){
+  return min+Math.floor(Math.random()*(max-min+1));
+}
+
+function getProjectedCustomerCount(day=G.day){
+  return Math.min(3+Math.floor(day*1.05)+getUpgradeLevel('street_sign'),9);
+}
+
+function getRestockAmounts(){
+  const coldRoomLevel=getUpgradeLevel('cold_room');
+  const demandToday=getProjectedCustomerCount(G.day);
+  const demandTomorrow=getProjectedCustomerCount(G.day+1);
+  const desiredNormal=Math.ceil(demandToday*0.65 + demandTomorrow*0.3)+1+coldRoomLevel;
+  const desiredInfected=Math.max(1,Math.floor(demandToday*0.2 + demandTomorrow*0.1))+(Math.random()<0.25?1:0);
+
+  const normalGap=Math.max(0,desiredNormal-G.inventory.normal.count);
+  const infectedGap=Math.max(0,desiredInfected-G.inventory.infected.count);
+
+  const normalBase=3+Math.floor(demandToday/4)+coldRoomLevel;
+  const infectedBase=1+(demandToday>=7&&Math.random()<0.35?1:0);
+
+  return {
+    normalRestock:normalGap>0 ? Math.max(normalBase,Math.ceil(normalGap*0.8)) : 1+coldRoomLevel+(Math.random()<0.35?1:0),
+    infectedRestock:infectedGap>0 ? Math.max(infectedBase,Math.ceil(infectedGap*0.8)) : (Math.random()<0.25?1:0),
+  };
+}
+
+function getSupplyName(key,lang=LANG){
+  return SUPPLY_DEFS[key]?.[lang] || key;
+}
+
+function formatSupplyLootList(keys,lang=LANG){
+  const counts=new Map();
+  keys.forEach(key=>counts.set(key,(counts.get(key)||0)+1));
+  return Array.from(counts.entries())
+    .map(([key,count])=>`${getSupplyName(key,lang)}${count>1?' x'+count:''}`)
+    .join(lang==='en'?', ':', ');
+}
+
+function getUpgradeLabel(key){
+  return UPGRADE_DEFS[key]?.label?.[LANG] || key;
+}
+
+function getUpgradeDesc(key){
+  return UPGRADE_DEFS[key]?.desc?.[LANG] || '';
+}
+
+function getUpgradeLevel(key){
+  return G.upgrades[key] || 0;
+}
+
+function getUpgradeCost(key){
+  const def=UPGRADE_DEFS[key];
+  if(!def) return Infinity;
+  return def.cost * (getUpgradeLevel(key)+1);
+}
+
+function getPatronById(id){
+  return G.patrons.find(p=>p.id===id) || null;
+}
+
+function getCustomerName(customer){
+  return LANG==='en' ? customer.nameEn : customer.nameRu;
+}
+
+function getCustomerRequest(customer){
+  return LANG==='en' ? customer.requestEn : customer.requestRu;
+}
+
+function getCustomerTypeLabel(customer){
+  return CUSTOMER_TYPES[customer.type]?.label?.[LANG] || '';
+}
+
+function createPatronRoster(){
+  G.patrons=NAMES.en.map((nameEn,idx)=>{
+    const typeKey=CUSTOMER_TYPE_KEYS[idx % CUSTOMER_TYPE_KEYS.length];
+    const type=CUSTOMER_TYPES[typeKey];
+    return {
+      id:'patron_'+idx,
+      nameEn,
+      nameRu:NAMES.ru[idx] || nameEn,
+      type:typeKey,
+      basePref:type.prefs[idx % type.prefs.length],
+      baseBudget:randInt(type.budgets[0],type.budgets[1]),
+      loyalty:0,
+      visits:0,
+      cooldown:0,
+      lastOutcome:'neutral',
+    };
+  });
+}
+
+function advancePatronsDay(){
+  G.patrons.forEach(patron=>{
+    patron.cooldown=Math.max(0,patron.cooldown-1);
+    if(patron.loyalty<=-3&&Math.random()<0.35){
+      patron.cooldown=Math.max(patron.cooldown,1);
+    }
+  });
+}
+
+function getPatronBudget(patron){
+  let budget=patron.baseBudget + Math.max(0,Math.min(patron.loyalty,3));
+  if(patron.type==='scavenger'&&patron.loyalty<0) budget-=1;
+  if(patron.type==='smuggler'&&patron.loyalty>=2) budget+=2;
+  return Math.max(4,budget);
+}
+
+function getPatronRequestLine(patron,pref,lang){
+  const type=CUSTOMER_TYPES[patron.type];
+  const pool=type.lines[lang][pref] || type.lines[lang][type.prefs[0]] || [''];
+  const base=pool[Math.floor(Math.random()*pool.length)];
+  let memory='';
+  const lastOutcome=patron.lastOutcome || 'neutral';
+  const remembersBad=lastOutcome==='bad_meat' || lastOutcome==='price' || lastOutcome==='skip' || lastOutcome==='rejected';
+  const remembersGood=lastOutcome==='good_sale';
+  if(remembersBad || patron.loyalty<=-2) memory=type.memory.bad[lang];
+  else if(remembersGood || patron.loyalty>=3) memory=type.memory.good[lang];
+  return memory?base+' '+memory:base;
+}
+
+function buildCustomerFromPatron(patron){
+  const type=CUSTOMER_TYPES[patron.type];
+  const pref=Math.random()<0.7 ? patron.basePref : type.prefs[Math.floor(Math.random()*type.prefs.length)];
+  return {
+    patronId:patron.id,
+    type:patron.type,
+    prefers:pref,
+    budget:getPatronBudget(patron),
+    nameEn:patron.nameEn,
+    nameRu:patron.nameRu,
+    requestEn:getPatronRequestLine(patron,pref,'en'),
+    requestRu:getPatronRequestLine(patron,pref,'ru'),
+  };
+}
+
+function rememberCustomer(customer,delta,cooldown=0,outcome=''){
+  const patron=getPatronById(customer.patronId);
+  if(!patron) return;
+  patron.loyalty=Math.max(-4,Math.min(5,patron.loyalty+delta));
+  patron.cooldown=Math.max(patron.cooldown,cooldown);
+  if(outcome) patron.lastOutcome=outcome;
+}
+
+function getMoroRequirements(stage=G.moroStage){
+  return MORO_REQUIREMENTS[stage] || {};
+}
+
+function getMissingMoroRequirements(stage=G.moroStage){
+  const requirements=getMoroRequirements(stage);
+  return Object.entries(requirements)
+    .filter(([key,count])=>(G.supplies[key]||0)<count)
+    .map(([key,count])=>({key, missing:count-(G.supplies[key]||0)}));
+}
+
+function hasMoroRequirements(stage=G.moroStage){
+  return getMissingMoroRequirements(stage).length===0;
+}
+
+function formatRequirementList(stage=G.moroStage,lang=LANG){
+  const requirements=getMoroRequirements(stage);
+  const bits=Object.entries(requirements).map(([key,count])=>{
+    const owned=G.supplies[key]||0;
+    const color=owned>=count?'var(--green-bright)':'var(--accent)';
+    return `<span style="color:${color}">${getSupplyName(key,lang)} ${owned}/${count}</span>`;
+  });
+  return bits.join('<br>');
+}
+
+function consumeMoroRequirements(stage=G.moroStage){
+  const requirements=getMoroRequirements(stage);
+  for(const [key,count] of Object.entries(requirements)){
+    G.supplies[key]=Math.max(0,(G.supplies[key]||0)-count);
+  }
+}
+
+function addSupply(key,count=1){
+  G.supplies[key]=(G.supplies[key]||0)+count;
+}
+
+function getPrioritySupplyKey(stage=Math.min(Math.max(G.moroStage,1),3)){
+  const missing=getMissingMoroRequirements(stage);
+  if(missing.length) return missing[0].key;
+  const pool=Object.keys(getMoroRequirements(stage));
+  return pool[Math.floor(Math.random()*pool.length)] || SUPPLY_KEYS[0];
+}
+
+function rollHuntSupplies(){
+  const found=[];
+  const stagePool=Object.keys(getMoroRequirements(Math.min(Math.max(G.moroStage,1),3)));
+  const fallbackPool=SUPPLY_KEYS;
+  const primaryPool=stagePool.length?stagePool:fallbackPool;
+  if(Math.random()<0.62){
+    found.push(primaryPool[Math.floor(Math.random()*primaryPool.length)]);
+  }
+  const extraChance=Math.min(0.35 + getUpgradeLevel('hunter_pack')*0.15,0.95);
+  if(Math.random()<extraChance){
+    found.push(fallbackPool[Math.floor(Math.random()*fallbackPool.length)]);
+  }
+  return found;
+}
+
+function finishNight(){
+  updateUI(); checkEndConditions();
+  if(!G.gameOver) setTimeout(startDay,500);
+}
+
+function maybeTriggerHuntStoryEvent(){
+  if(G.storyFlags.satchelEventDone||G.day<4||Math.random()>=0.35) return false;
+  G.storyFlags.satchelEventDone=true;
+  const supplyKey=getPrioritySupplyKey();
+  const supplyNameEn=getSupplyName(supplyKey,'en');
+  const supplyNameRu=getSupplyName(supplyKey,'ru');
+  const bodyEn=`<p>Half-buried in swamp muck, you find a sealed medical satchel with a ZonTech stamp scraped off.</p>
+<p>Inside: field notes, a cracked ampoule, and one salvageable component Moro would absolutely recognize.</p>
+<p><strong>What do you do with it?</strong></p>`;
+  const bodyRu=`<p>Наполовину утопленный в болотной жиже, ты находишь запечатанный медицинский саквояж со соскобленным клеймом ZonTech.</p>
+<p>Внутри: полевые записи, треснувшая ампула и один уцелевший компонент, который Моро точно узнает.</p>
+<p><strong>Что ты с ним делаешь?</strong></p>`;
+  showDialogue(LANG==='en'?'Swamp Satchel':'Болотный саквояж','var(--accent2)',LANG==='en'?bodyEn:bodyRu,[
+    {label:LANG==='en'?'Bring it to Moro':'Отнести Моро',cls:'btn-moro',action:()=>{
+      addSupply(supplyKey,1);
+      log((LANG==='en'?'You stash the satchel for Moro. Gained ':'Ты прячешь саквояж для Моро. Получено ')+(LANG==='en'?supplyNameEn:supplyNameRu)+'.','log-moro');
+      finishNight();
+    }},
+    {label:LANG==='en'?'Sell it to Skull':'Продать Скуллу',cls:'',action:()=>{
+      G.money+=90;
+      log((LANG==='en'?'Mr. Skull buys the satchel without opening it. Earned ':'Мистер Скулл покупает саквояж, даже не открывая. Заработано ')+'<span style="color:var(--money)">$90</span>.','log-skull');
+      finishNight();
+    }},
+    {label:LANG==='en'?'Burn it':'Сжечь',cls:'',action:()=>{
+      G.suspicion=Math.max(0,G.suspicion-6);
+      log(LANG==='en'?'You burn the records and bleach the tin. Suspicion −6.':'Ты сжигаешь записи и выбеливаешь жестянку. Подозрение −6.','log-night');
+      finishNight();
+    }},
+  ]);
+  return true;
+}
+
 function renderInventory(){
   const list=document.getElementById('inv-list'); list.innerHTML='';
   for(const [key,item] of Object.entries(G.inventory)){
@@ -729,15 +1155,49 @@ function renderInventory(){
   }
 }
 
+function renderSupplies(){
+  const list=document.getElementById('supply-list');
+  list.innerHTML='';
+  const entries=SUPPLY_KEYS.filter(key=>G.supplies[key]>0);
+  if(entries.length===0){
+    list.innerHTML=`<div class="side-empty">${t('no_supplies')}</div>`;
+    return;
+  }
+  entries.forEach(key=>{
+    const row=document.createElement('div');
+    row.className='side-item';
+    row.innerHTML=`<span class="side-item-name">${getSupplyName(key)}</span><span class="side-item-value">${G.supplies[key]}</span>`;
+    list.appendChild(row);
+  });
+}
+
+function renderUpgradeList(){
+  const list=document.getElementById('upgrade-list');
+  list.innerHTML='';
+  const entries=UPGRADE_KEYS.filter(key=>getUpgradeLevel(key)>0);
+  if(entries.length===0){
+    list.innerHTML=`<div class="side-empty">${t('no_upgrades')}</div>`;
+    return;
+  }
+  entries.forEach(key=>{
+    const row=document.createElement('div');
+    row.className='side-item';
+    row.innerHTML=`<span class="side-item-name">${getUpgradeLabel(key)}</span><span class="side-item-value">x${getUpgradeLevel(key)}</span>`;
+    list.appendChild(row);
+  });
+}
+
 function renderCustomer(){
   const c=G.currentCustomer;
   if(!c||G.phase==='night'){
     document.getElementById('customer-name').textContent=G.phase==='night'?t('shop_closed'):t('no_one');
+    document.getElementById('customer-type').textContent='';
     document.getElementById('customer-request').textContent=G.phase==='night'?t('city_sleeps'):t('no_line');
     return;
   }
-  document.getElementById('customer-name').textContent=c.name;
-  document.getElementById('customer-request').textContent=c.request ?? c.text ?? '';
+  document.getElementById('customer-name').textContent=getCustomerName(c);
+  document.getElementById('customer-type').textContent=getCustomerTypeLabel(c);
+  document.getElementById('customer-request').textContent=getCustomerRequest(c);
 }
 
 function getPriceMenuMarkup(){
@@ -784,6 +1244,49 @@ function resetPrice(key){
   openPriceMenu();
 }
 
+function getUpgradeMenuMarkup(){
+  return UPGRADE_KEYS.map(key=>{
+    const def=UPGRADE_DEFS[key];
+    const level=getUpgradeLevel(key);
+    const cost=getUpgradeCost(key);
+    const canBuy=G.money>=cost;
+    const btnLabel=canBuy ? `${t('upgrade_buy')} $${cost}` : `${t('upgrade_need')} $${cost}`;
+    return `<div class="upgrade-menu-row">
+      <div>
+        <div class="upgrade-menu-name">${getUpgradeLabel(key)}</div>
+        <div class="upgrade-menu-desc">${getUpgradeDesc(key)}</div>
+        <div class="upgrade-menu-cost">${t('upgrade_level')}: ${level}</div>
+        <div class="upgrade-menu-cost">${t('upgrade_next_cost')}: $${cost}</div>
+        ${level>0?`<div class="upgrade-menu-status">${t('upgrade_owned')} x${level}</div>`:''}
+      </div>
+      <div class="price-menu-controls">
+        <button class="btn" ${!canBuy?'disabled':''} onclick="buyUpgrade('${key}')">${btnLabel}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openUpgradeMenu(){
+  if(G.phase!=='day'||G.gameOver) return;
+  showDialogue(t('upgrade_menu_title'),'var(--accent2)',getUpgradeMenuMarkup(),[
+    {label:t('upgrade_menu_close'),cls:'',action:()=>{}}
+  ]);
+}
+
+function buyUpgrade(key){
+  if(G.phase!=='day'||G.gameOver) return;
+  const def=UPGRADE_DEFS[key];
+  const cost=getUpgradeCost(key);
+  if(!def||G.money<cost) return;
+  G.money-=cost;
+  G.upgrades[key]=getUpgradeLevel(key)+1;
+  log(LANG==='en'
+    ?`You upgrade ${getUpgradeLabel(key)} to level ${getUpgradeLevel(key)}. The shop feels a little more dangerous. And a little more professional.`
+    :`Ты улучшаешь «${getUpgradeLabel(key)}» до уровня ${getUpgradeLevel(key)}. Лавка становится чуть опаснее. И чуть профессиональнее.`,'log-system');
+  updateUI();
+  openUpgradeMenu();
+}
+
 // ══════════════════════════════════════════
 //  DIALOGUE
 // ══════════════════════════════════════════
@@ -810,6 +1313,7 @@ function showDialogue(speaker, color, bodyHtml, buttons){
 function startGame(){
   document.getElementById('title-screen').style.display='none';
   G.act=1;
+  createPatronRoster();
   G.inventory.normal.name   = t('inv_normal');
   G.inventory.infected.name = t('inv_infected');
   G.inventory.human.name    = t('inv_human');
@@ -857,18 +1361,33 @@ function customerAccepts(c,key){
   return true;
 }
 
+function getPatronSelectionScore(patron,streetSignLevel){
+  let score=Math.random()*1.8 + patron.loyalty*0.25;
+  if(patron.visits>0) score+=0.8;
+  if((patron.lastOutcome||'neutral')!=='neutral') score+=2.6;
+  if(patron.loyalty>0) score+=streetSignLevel*0.45;
+  return score;
+}
+
 function generateCustomers(){
-  const count=Math.min(3+Math.floor(G.day*1.1),9);
-  G.customersTotal=count; G.customersServed=0; G.customers=[];
-  const reqs=REQUESTS[LANG]; const names=NAMES[LANG];
-  for(let i=0;i<count;i++){
-    const r=reqs[Math.floor(Math.random()*reqs.length)];
-    G.customers.push({
-      name:names[Math.floor(Math.random()*names.length)],
-      ...r,
-      request:r.request ?? r.text ?? '',
-    });
-  }
+  const streetSignLevel=getUpgradeLevel('street_sign');
+  const count=getProjectedCustomerCount();
+  G.customersTotal=0; G.customersServed=0; G.customers=[];
+  const available=G.patrons.filter(patron=>patron.cooldown===0);
+  const remembered=available
+    .filter(patron=>(patron.lastOutcome||'neutral')!=='neutral')
+    .sort((a,b)=>getPatronSelectionScore(b,streetSignLevel)-getPatronSelectionScore(a,streetSignLevel))
+    .slice(0,Math.min(2,count));
+  const rememberedIds=new Set(remembered.map(patron=>patron.id));
+  const ordered=[...available]
+    .filter(patron=>!rememberedIds.has(patron.id))
+    .sort((a,b)=>getPatronSelectionScore(b,streetSignLevel)-getPatronSelectionScore(a,streetSignLevel));
+  const selected=[...remembered,...ordered.slice(0,Math.max(0,count-remembered.length))];
+  selected.forEach(patron=>{
+    patron.visits++;
+    G.customers.push(buildCustomerFromPatron(patron));
+  });
+  G.customersTotal=G.customers.length;
 }
 
 // ══════════════════════════════════════════
@@ -876,6 +1395,7 @@ function generateCustomers(){
 // ══════════════════════════════════════════
 function startDay(){
   G.phase='day';
+  advancePatronsDay();
   const marketShifted=G.day>1&&G.day%2===0&&updateMarketPrices();
 
   // Unlock human meat
@@ -895,10 +1415,9 @@ function startDay(){
     document.getElementById('btn-visit-moro').style.display='inline-block';
   }
 
-  // Restock every 2 days with softer random gains
+  // Restock every 2 days based on expected demand for the next two days
   if(G.day%2===0){
-    const normalRestock=2+Math.floor(Math.random()*2)+(G.day>=6&&Math.random()<0.4?1:0);
-    const infectedRestock=1+(Math.random()<0.45?1:0);
+    const {normalRestock,infectedRestock}=getRestockAmounts();
     G.inventory.normal.count  += normalRestock;
     G.inventory.infected.count += infectedRestock;
   }
@@ -975,8 +1494,107 @@ function nextCustomer(){
   G.currentCustomer=G.customers.shift();
   document.getElementById('btn-sell').disabled=false;
   document.getElementById('btn-skip-cust').disabled=false;
-  log('<span style="color:var(--accent)">'+G.currentCustomer.name+'</span>'+(LANG==='en'?' enters. ':' входит. ')+(G.currentCustomer.request ?? G.currentCustomer.text ?? ''),'log-customer');
+  log('<span style="color:var(--accent)">'+getCustomerName(G.currentCustomer)+'</span>'+(LANG==='en'?' enters. ':' входит. ')+getCustomerRequest(G.currentCustomer),'log-customer');
   updateUI();
+}
+
+function registerCustomerRefusal(customer,reason='skip'){
+  let delta=reason==='price' ? -2 : -1;
+  if(customer.type==='scavenger'||customer.type==='zontech') delta-=1;
+  if(reason==='skip'&&customer.type==='regular') delta-=1;
+  const cooldown=reason==='price'?2:1;
+  rememberCustomer(customer,delta,cooldown,reason);
+}
+
+function maybeAwardTip(customer,item){
+  const patron=getPatronById(customer.patronId);
+  if(!patron) return;
+
+  let tipChance=0;
+  let tipMin=0;
+  let tipMax=0;
+
+  if(customer.type==='smuggler'&&patron.loyalty>=1){
+    tipChance=patron.loyalty>=3 ? 1 : 0.72;
+    if(item.price<=item.basePrice) tipChance=Math.min(1,tipChance+0.12);
+    tipMin=5+Math.max(0,patron.loyalty-1);
+    tipMax=9+patron.loyalty;
+  } else if(customer.type==='regular'&&patron.loyalty>=4){
+    tipChance=0.28;
+    tipMin=2;
+    tipMax=5;
+  }
+
+  if(tipChance<=0||Math.random()>tipChance) return;
+
+  const tip=randInt(tipMin,tipMax);
+  G.money+=tip;
+  log((LANG==='en'?'A folded bonus appears on the counter: ':'На прилавке появляется сложенная купюра: ')+'<span style="color:var(--money)">$'+tip+'</span>.','log-result');
+}
+
+function legacyApplyCustomerSaleMemory(customer,item){
+  if(item.infects&&customer.type!=='ghoul'){
+    let loyaltyLoss=-2;
+    if(customer.type==='regular'||customer.type==='zontech') loyaltyLoss-=1;
+    rememberCustomer(customer,loyaltyLoss,2,'bad_meat');
+
+    if(customer.type==='zontech'){
+      const extraSuspicion=Math.max(2,8-getUpgradeLevel('sanitary_seal')*2);
+      G.suspicion+=extraSuspicion;
+      log(LANG==='en'
+        ?`${getCustomerName(customer)} goes quiet. <em>"That taste wasn't right."</em> Suspicion +${extraSuspicion}.`
+        :`${getCustomerName(customer)} СЂРµР·РєРѕ Р·Р°С‚РёС…Р°РµС‚. <em>В«Р’РєСѓСЃ РєР°РєРѕР№-С‚Рѕ РЅРµ С‚РѕС‚.В»</em> РџРѕРґРѕР·СЂРµРЅРёРµ +${extraSuspicion}.`,'log-bad');
+    }
+    return;
+  }
+
+  let loyaltyGain=1;
+  if(customer.type==='regular') loyaltyGain+=1;
+  if(customer.type==='ghoul'&&item.infects) loyaltyGain+=1;
+  if(customer.type==='scavenger'&&item.price<=item.basePrice) loyaltyGain+=1;
+  if(customer.type==='zontech'&&!item.infects) loyaltyGain+=1;
+  rememberCustomer(customer,loyaltyGain,0,'good_sale');
+
+  if(customer.type==='zontech'&&item.infects){
+    const extraSuspicion=Math.max(2,8-getUpgradeLevel('sanitary_seal')*2);
+    G.suspicion+=extraSuspicion;
+    rememberCustomer(customer,-2,2,'bad_meat');
+    log(LANG==='en'
+      ?`${getCustomerName(customer)} goes quiet. <em>"That taste wasn't right."</em> Suspicion +${extraSuspicion}.`
+      :`${getCustomerName(customer)} резко затихает. <em>«Вкус какой-то не тот.»</em> Подозрение +${extraSuspicion}.`,'log-bad');
+  }
+
+  maybeAwardTip(customer,item);
+  if(false){
+    const tip=3+Math.floor(Math.random()*4);
+    G.money+=tip;
+    log((LANG==='en'?'A folded bonus appears on the counter: ':'На прилавке появляется сложенная купюра: ')+'<span style="color:var(--money)">$'+tip+'</span>.','log-result');
+  }
+}
+
+function applyCustomerSaleMemory(customer,item){
+  if(item.infects&&customer.type!=='ghoul'){
+    let loyaltyLoss=-2;
+    if(customer.type==='regular'||customer.type==='zontech') loyaltyLoss-=1;
+    rememberCustomer(customer,loyaltyLoss,2,'bad_meat');
+
+    if(customer.type==='zontech'){
+      const extraSuspicion=Math.max(2,8-getUpgradeLevel('sanitary_seal')*2);
+      G.suspicion+=extraSuspicion;
+      log(LANG==='en'
+        ?`${getCustomerName(customer)} goes quiet. <em>"That taste wasn't right."</em> Suspicion +${extraSuspicion}.`
+        :`${getCustomerName(customer)} резко затихает. <em>«Вкус какой-то не тот.»</em> Подозрение +${extraSuspicion}.`,'log-bad');
+    }
+    return;
+  }
+
+  let loyaltyGain=1;
+  if(customer.type==='regular') loyaltyGain+=1;
+  if(customer.type==='ghoul'&&item.infects) loyaltyGain+=1;
+  if(customer.type==='scavenger'&&item.price<=item.basePrice) loyaltyGain+=1;
+  if(customer.type==='zontech'&&!item.infects) loyaltyGain+=1;
+  rememberCustomer(customer,loyaltyGain,0,'good_sale');
+  maybeAwardTip(customer,item);
 }
 
 function sellSelected(){
@@ -986,39 +1604,48 @@ function sellSelected(){
   if(item.count===0) return log((LANG==='en'?'Out of ':'Закончилось: ')+item.name+'.','log-bad');
   const c=G.currentCustomer;
   if(isPriceOverOriginalLimit(item)){
+    const name=getCustomerName(c);
     log(LANG==='en'
-      ?`${c.name} grimaces. <em>"$${item.price} for ${item.name}? That's price gouging, Ray."</em>`
-      :`${c.name} кривится. <em>«$${item.price} за ${item.name}? Это уже грабёж, Рэй.»</em>`,'log-bad');
+      ?`${name} grimaces. <em>"$${item.price} for ${item.name}? That's price gouging, Ray."</em>`
+      :`${name} кривится. <em>«$${item.price} за ${item.name}? Это уже грабёж, Рэй.»</em>`,'log-bad');
+    registerCustomerRefusal(c,'price');
     G.currentCustomer=null; updateUI(); nextCustomer();
     return;
   }
   if(!customerAccepts(c,G.selectedMeat)||(item.price>c.budget&&c.prefers==='cheap')){
-    log(c.name+(LANG==='en'?' shakes their head.':' качает головой.'),'log-bad');
-    skipCustomer(); return;
+    log(getCustomerName(c)+(LANG==='en'?' shakes their head.':' качает головой.'),'log-bad');
+    skipCustomer('rejected'); return;
   }
   item.count--; G.money+=item.price; G.customersServed++;
   if(item.infects){
     G.infected++;
-    const msgs_en=[c.name+' takes the package. Looks satisfied. Shouldn\'t be.',c.name+' tucks it away. Humming.',c.name+' notices nothing unusual. Good.'];
-    const msgs_ru=[c.name+' берёт пакет. Выглядит довольным. Напрасно.',c.name+' убирает его. Напевает.',c.name+' ничего не замечает. Хорошо.'];
+    const name=getCustomerName(c);
+    const msgs_en=[name+' takes the package. Looks satisfied. Shouldn\'t be.',name+' tucks it away. Humming.',name+' notices nothing unusual. Good.'];
+    const msgs_ru=[name+' берёт пакет. Выглядит довольным. Напрасно.',name+' убирает его. Напевает.',name+' ничего не замечает. Хорошо.'];
     log((LANG==='en'?msgs_en:msgs_ru)[Math.floor(Math.random()*3)],'log-result');
   } else {
-    const msgs_en=[c.name+' nods and pays. <em>"Always the best here."</em>',c.name+' seems pleased. <em>"Same time next week."</em>'];
-    const msgs_ru=[c.name+' кивает и платит. <em>«Здесь всегда лучший товар.»</em>',c.name+' доволен. <em>«До следующей недели.»</em>'];
+    const name=getCustomerName(c);
+    const msgs_en=[name+' nods and pays. <em>"Always the best here."</em>',name+' seems pleased. <em>"Same time next week."</em>'];
+    const msgs_ru=[name+' кивает и платит. <em>«Здесь всегда лучший товар.»</em>',name+' доволен. <em>«До следующей недели.»</em>'];
     log((LANG==='en'?msgs_en:msgs_ru)[Math.floor(Math.random()*2)],'log-result');
   }
+  applyCustomerSaleMemory(c,item);
   updateUI(); nextCustomer();
 }
 
-function skipCustomer(){
+function skipCustomer(reason='skip'){
   if(!G.currentCustomer) return;
-  log(G.currentCustomer.name+(LANG==='en'?' leaves empty-handed.':' уходит ни с чем.'),'log-system');
+  registerCustomerRefusal(G.currentCustomer,reason);
+  log(getCustomerName(G.currentCustomer)+(LANG==='en'?' leaves empty-handed.':' уходит ни с чем.'),'log-system');
   G.currentCustomer=null; updateUI(); nextCustomer();
 }
 
 function endDay(){
-  if(G.infected>5)  G.suspicion+=2;
-  if(G.infected>12) G.suspicion+=3;
+  let suspicionGain=0;
+  if(G.infected>5)  suspicionGain+=2;
+  if(G.infected>12) suspicionGain+=3;
+  suspicionGain=Math.max(0,suspicionGain-getUpgradeLevel('sanitary_seal')*2);
+  G.suspicion+=suspicionGain;
   logSep();
   log(LANG==='en'?'You close the shutters. Another day in Bayhaven.':'Закрываешь ставни. Ещё один день в Бэйхэвене.','log-system');
   log((LANG==='en'?'Register: ':'В кассе: ')+'<span style="color:var(--money)">$'+G.money+'</span>','log-system');
@@ -1041,6 +1668,7 @@ function endDay(){
 // ══════════════════════════════════════════
 function nightAction(action){
   if(G.phase!=='night') return;
+  let holdNight=false;
 
   if(action==='hunt'){
     const caught=Math.random()<(G.suspicion/200);
@@ -1049,12 +1677,19 @@ function nightAction(action){
       log(LANG==='en'?'Something went wrong. Came back empty-handed. Someone saw you.':'Что-то пошло не так. Вернулся пустым. Кто-то видел.','log-bad');
       log('<span style="color:var(--accent)">'+(LANG==='en'?'Suspicion +20.':'Подозрение +20.')+'</span>','log-bad');
     } else {
-      const gain=2+Math.floor(Math.random()*2);
+      const gain=2+Math.floor(Math.random()*2)+getUpgradeLevel('hunter_pack');
       G.inventory.human.count+=gain;
       if(!G.inventory.human.unlocked) G.inventory.human.unlocked=true;
+      const foundSupplies=rollHuntSupplies();
+      foundSupplies.forEach(key=>addSupply(key,1));
       G.suspicion+=10;
       log(LANG==='en'?'A productive night. The cooler is stocked. Best not to think about it.':'Продуктивная ночь. Холодильник пополнен. Лучше не думать.','log-night');
       log((LANG==='en'?'Got ':'Получено ')+gain+(LANG==='en'?' unit(s). Suspicion +10.':' ед. Подозрение +10.'),'log-night');
+      if(foundSupplies.length){
+        const list=formatSupplyLootList(foundSupplies);
+        log((LANG==='en'?'Scavenged: ':'Добыто: ')+list+'.','log-night');
+      }
+      holdNight=maybeTriggerHuntStoryEvent();
     }
   } else if(action==='trade'){
     const earn=35+Math.floor(Math.random()*20);
@@ -1096,8 +1731,11 @@ function nightAction(action){
     setTimeout(()=>log('<span style="color:var(--skull)">Mr. Skull: </span><em>'+lore+'</em>','log-lore'),700);
   }
 
-  updateUI(); checkEndConditions();
-  if(!G.gameOver) setTimeout(startDay,500);
+  if(holdNight){
+    updateUI();
+    return;
+  }
+  finishNight();
 }
 
 // ══════════════════════════════════════════
@@ -1107,6 +1745,10 @@ function visitMoro(){
   if(G.moroStage<1||G.moroStage>=4) return;
   const stageCost=getMoroStageCost();
   const canPay=G.money>=stageCost;
+  const canDeliver=hasMoroRequirements();
+  const missingRequirements=getMissingMoroRequirements();
+  const supplyBlockEn=`<p><span style="color:var(--text-dim)">Required materials:</span><br>${formatRequirementList(G.moroStage,'en')}</p>`;
+  const supplyBlockRu=`<p><span style="color:var(--text-dim)">Нужные материалы:</span><br>${formatRequirementList(G.moroStage,'ru')}</p>`;
 
   const dialogues={
     en:{
@@ -1115,23 +1757,23 @@ function visitMoro(){
 <p><em>"Ray. I know what you are. LARVE reanimated you — and left a chemical signature I can identify."</em></p>
 <p><em>"My name is Dr. Moro. I was a ZonTech consultant before the Breach. They know I have the antidote formula. That's why I'm still alive in this city."</em></p>
 <p><em>"I can synthesize an antidote. Three stages. First I need reagents and a blood sample. Stage one costs $1,000."</em></p>
-<p><span style="color:var(--text-dim)">Total: $4,250 across three payments. Current stage: $1,000.</span></p>`,
-        pay:'Pay $1,000 — Stage 1', later:'Come back later'
+<p><span style="color:var(--text-dim)">Total: $4,250 across three payments. Current stage: $1,000.</span></p>${supplyBlockEn}`,
+        pay:'Pay $1,000 and hand over supplies — Stage 1', later:'Come back later'
       },
       2:{
         body:`<p>Moro adjusts his glasses without looking up from his notes.</p>
 <p><em>"Blood analysis is complete. LARVE bonded to your neural tissue — that's why you retained cognition. Unusual case."</em></p>
 <p><em>"Stage two requires a synthetic compound. I need someone on the outside. Another $1,500."</em></p>
-<p><span style="color:var(--text-dim)">Current goal: $2,500 total.</span></p>`,
-        pay:'Pay $1,500 — Stage 2', later:'Not yet'
+<p><span style="color:var(--text-dim)">Current goal: $2,500 total.</span></p>${supplyBlockEn}`,
+        pay:'Pay $1,500 and hand over supplies — Stage 2', later:'Not yet'
       },
       3:{
         body:`<p>Moro holds a small vial to the light. Something shifts inside it.</p>
 <p><em>"The final synthesis is ready. Or close enough."</em></p>
 <p><em>"This compound will neutralize LARVE in your system — if it works as modeled."</em></p>
 <p><em>"I said 'if.' Don't look at me like that. $1,750. My last fee."</em></p>
-<p><span style="color:var(--text-dim)">Final payment. Total: $4,250.</span></p>`,
-        pay:'Pay $1,750 — Final Stage', later:'Not yet'
+<p><span style="color:var(--text-dim)">Final payment. Total: $4,250.</span></p>${supplyBlockEn}`,
+        pay:'Pay $1,750 and hand over supplies — Final Stage', later:'Not yet'
       }
     },
     ru:{
@@ -1140,31 +1782,34 @@ function visitMoro(){
 <p><em>«Рэй. Я знаю, что ты такое. LARVE реанимировал тебя и оставил химическую сигнатуру, которую я умею читать.»</em></p>
 <p><em>«Меня зовут доктор Моро. До Прорыва я консультировал ZonTech. Они знают, что у меня есть формула антидота. Поэтому я ещё живу в этом городе.»</em></p>
 <p><em>«Я могу синтезировать антидот. Три этапа. Сначала нужны реактивы и образец крови. Первый этап стоит $1000.»</em></p>
-<p><span style="color:var(--text-dim)">Итого: $4250 в три платежа. Текущий этап: $1000.</span></p>`,
-        pay:'Заплатить $1000 — Этап 1', later:'Вернуться позже'
+<p><span style="color:var(--text-dim)">Итого: $4250 в три платежа. Текущий этап: $1000.</span></p>${supplyBlockRu}`,
+        pay:'Заплатить $1000 и отдать материалы — Этап 1', later:'Вернуться позже'
       },
       2:{
         body:`<p>Моро поправляет очки, не поднимая взгляда от записей.</p>
 <p><em>«Анализ крови готов. LARVE связался с нейронной тканью — поэтому ты сохранил рассудок. Необычный случай.»</em></p>
 <p><em>«Второй этап требует синтетического компонента. Нужно договориться с кем-то снаружи. Ещё $1500.»</em></p>
-<p><span style="color:var(--text-dim)">Текущая цель: суммарно $2500.</span></p>`,
-        pay:'Заплатить $1500 — Этап 2', later:'Ещё не сейчас'
+<p><span style="color:var(--text-dim)">Текущая цель: суммарно $2500.</span></p>${supplyBlockRu}`,
+        pay:'Заплатить $1500 и отдать материалы — Этап 2', later:'Ещё не сейчас'
       },
       3:{
         body:`<p>Моро держит маленький пузырёк на свету. Что-то внутри движется.</p>
 <p><em>«Финальный синтез готов. Или почти.»</em></p>
 <p><em>«Это вещество нейтрализует LARVE в твоей системе — если работает так, как в модели.»</em></p>
 <p><em>«Я сказал "если". Не смотри на меня так. $1750. Последний платёж.»</em></p>
-<p><span style="color:var(--text-dim)">Финальный платёж. Итого: $4250.</span></p>`,
-        pay:'Заплатить $1750 — Финальный этап', later:'Ещё не сейчас'
+<p><span style="color:var(--text-dim)">Финальный платёж. Итого: $4250.</span></p>${supplyBlockRu}`,
+        pay:'Заплатить $1750 и отдать материалы — Финальный этап', later:'Ещё не сейчас'
       }
     }
   };
 
   const d=dialogues[LANG][G.moroStage]; if(!d) return;
   const btns=[];
-  if(canPay){
+  if(canPay&&canDeliver){
     btns.push({label:d.pay,cls:'btn-moro',action:()=>payMoro()});
+  } else if(!canDeliver){
+    const missingText=missingRequirements.map(({key,missing})=>`${getSupplyName(key)} x${missing}`).join(', ');
+    btns.push({label:LANG==='en'?'Need supplies: '+missingText:'Нужны материалы: '+missingText,cls:'',action:()=>{}});
   } else {
     btns.push({label:LANG==='en'?'Need $'+stageCost+' (short by $'+(stageCost-G.money)+')':'Нужно $'+stageCost+' (не хватает $'+(stageCost-G.money)+')',cls:'',action:()=>{}});
   }
@@ -1174,7 +1819,8 @@ function visitMoro(){
 
 function payMoro(){
   const stageCost=getMoroStageCost();
-  if(G.money<stageCost) return;
+  if(G.money<stageCost||!hasMoroRequirements()) return;
+  consumeMoroRequirements();
   G.money-=stageCost; G.moroPaid+=stageCost; G.moroStage++;
   if(G.moroStage===4){
     log(LANG==='en'
