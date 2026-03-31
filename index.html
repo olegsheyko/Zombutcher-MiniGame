@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZOMBUTCHER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+  :root {
+    --bg:#0a0804; --panel:#110e09; --panel2:#181208; --border:#3a2a14;
+    --accent:#c8380a; --accent2:#8b1a00; --blood:#6b0000;
+    --text:#c9b99a; --text-dim:#6b5a3e; --text-bright:#e8d5b0;
+    --green:#2a5c2a; --green-bright:#4a9c4a; --yellow:#c8a000;
+    --suspicion:#c8380a; --money:#c8a000; --moro:#5a8aaa; --skull:#9a6aaa;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Courier Prime',monospace;font-size:14px;
+    height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;}
+  body::before{content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:999;}
+
+  #game-container{width:min(720px,100vw);height:min(610px,100vh);display:flex;flex-direction:column;
+    border:1px solid var(--border);background:var(--panel);position:relative;
+    box-shadow:0 0 60px rgba(200,56,10,0.08),inset 0 0 60px rgba(0,0,0,0.5);}
+
+  /* TOP BAR */
+  #topbar{display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;}
+  .tb-block{padding:5px 11px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:2px;min-width:68px;}
+  .tb-label{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);}
+  .tb-value{font-family:'Special Elite',serif;font-size:15px;color:var(--text-bright);}
+  #phase-indicator{font-family:'Special Elite',serif;font-size:15px;padding:5px 12px;display:flex;
+    align-items:center;gap:7px;border-right:1px solid var(--border);white-space:nowrap;}
+  #phase-dot{width:7px;height:7px;border-radius:50%;background:var(--yellow);
+    box-shadow:0 0 8px var(--yellow);animation:pulse 2s infinite;flex-shrink:0;}
+  #phase-dot.night{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  #money-val{color:var(--money);} #susp-val{color:var(--suspicion);} #moro-tb-val{color:var(--moro);font-size:12px;}
+  #lang-btn{margin-left:auto;border:none;background:none;color:var(--text-dim);font-family:'Courier Prime',monospace;
+    font-size:10px;letter-spacing:2px;cursor:pointer;padding:5px 11px;border-left:1px solid var(--border);
+    text-transform:uppercase;transition:color 0.2s;}
+  #lang-btn:hover{color:var(--text-bright);}
+
+  /* MORO BAR */
+  #moro-bar-row{display:none;align-items:center;background:var(--bg);border-bottom:1px solid var(--border);
+    padding:3px 12px;gap:10px;font-size:9px;color:var(--text-dim);flex-shrink:0;}
+  #moro-bar-wrap{flex:1;height:4px;background:#1a1408;border:1px solid var(--border);}
+  #moro-bar{height:100%;background:var(--moro);transition:width 0.5s;box-shadow:0 0 6px var(--moro);}
+
+  /* SUSPICION BAR */
+  #susp-bar-wrap{height:3px;background:#1a0f00;flex-shrink:0;}
+  #susp-bar{height:100%;background:var(--accent);transition:width 0.5s;box-shadow:0 0 6px var(--accent);}
+
+  /* MAIN */
+  #main{flex:1;display:flex;overflow:hidden;}
+  #scene{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+  #scene-header{padding:5px 12px;border-bottom:1px solid var(--border);font-size:9px;letter-spacing:3px;
+    text-transform:uppercase;color:var(--text-dim);background:var(--bg);display:flex;justify-content:space-between;align-items:center;}
+  #act-label{color:var(--accent2);font-size:8px;letter-spacing:1px;}
+  #log{flex:1;overflow-y:auto;padding:9px 12px;display:flex;flex-direction:column;gap:5px;
+    scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  .log-entry{line-height:1.5;opacity:0;animation:fadeIn 0.3s forwards;font-size:12px;}
+  @keyframes fadeIn{to{opacity:1}}
+  .log-system{color:var(--text-dim);}
+  .log-customer{color:var(--text-bright);}
+  .log-customer::before{content:'▸ ';color:var(--accent);}
+  .log-result{color:var(--green-bright);}
+  .log-bad{color:var(--accent);}
+  .log-night{color:var(--skull);}
+  .log-moro{color:var(--moro);}
+  .log-skull{color:var(--skull);}
+  .log-lore{color:#8a7050;font-style:italic;}
+  .log-separator{border-top:1px solid var(--border);margin:3px 0;opacity:0.5!important;}
+
+  /* SIDEBAR */
+  #sidebar{width:205px;display:flex;flex-direction:column;flex-shrink:0;}
+  #customer-panel{border-bottom:1px solid var(--border);padding:8px 10px;background:var(--bg);min-height:90px;}
+  #customer-panel h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;}
+  #customer-name{font-family:'Special Elite',serif;font-size:13px;color:var(--accent);margin-bottom:3px;}
+  #customer-request{font-size:11px;color:var(--text);font-style:italic;line-height:1.4;}
+  #inventory-panel{flex:1;padding:8px 10px;overflow-y:auto;}
+  #inventory-panel h3{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+  .inv-item{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;padding:4px 7px;
+    background:var(--panel2);border:1px solid var(--border);cursor:pointer;transition:border-color 0.15s,background 0.15s;font-size:11px;}
+  .inv-item:hover{border-color:var(--accent);background:#1a1008;}
+  .inv-item.selected{border-color:var(--accent);background:#200a00;box-shadow:inset 0 0 8px rgba(200,56,10,0.15);}
+  .inv-item.disabled{opacity:0.3;cursor:not-allowed;}
+  .inv-name{color:var(--text-bright);} .inv-count{font-family:'Special Elite',serif;color:var(--accent2);font-size:14px;}
+  .inv-price{font-size:9px;color:var(--text-dim);margin-top:1px;}
+
+  /* BOTTOM */
+  #bottombar{border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;
+    padding:6px 10px;background:var(--bg);flex-shrink:0;flex-wrap:wrap;min-height:44px;}
+  .btn{font-family:'Courier Prime',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+    padding:5px 10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);
+    cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn:hover{border-color:var(--accent);color:var(--text-bright);background:#1a0e00;}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{border-color:var(--accent2);color:var(--accent);}
+  .btn-primary:hover{background:#2a0800;box-shadow:0 0 12px rgba(200,56,10,0.2);}
+  .btn-moro{border-color:#2a4a6a;color:var(--moro);}
+  .btn-moro:hover{background:#0a1a2a;box-shadow:0 0 12px rgba(90,138,170,0.2);}
+  .btn:disabled{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+  #btn-hint{font-size:10px;color:var(--text-dim);margin-left:auto;font-style:italic;}
+  #night-actions{display:none;flex-wrap:wrap;gap:5px;width:100%;}
+  .night-btn{flex:1;min-width:110px;padding:6px 7px;text-align:center;font-size:10px;line-height:1.5;}
+  .night-btn .n-title{font-family:'Special Elite',serif;font-size:13px;color:var(--text-bright);display:block;margin-bottom:1px;}
+  .night-btn .n-desc{color:var(--text-dim);font-size:9px;display:block;}
+
+  /* DIALOGUE */
+  #dialogue-panel{display:none;position:absolute;inset:0;background:rgba(5,3,2,0.97);z-index:50;
+    flex-direction:column;padding:22px 28px;}
+  #dialogue-panel.show{display:flex;}
+  #dialogue-speaker{font-family:'Special Elite',serif;font-size:17px;margin-bottom:4px;}
+  #dialogue-body{flex:1;overflow-y:auto;line-height:1.85;color:var(--text);font-size:12px;padding:12px 0;
+    scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  #dialogue-body p{margin-bottom:9px;}
+  #dialogue-footer{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
+
+  /* OVERLAY */
+  #overlay{display:none;position:absolute;inset:0;background:rgba(5,3,2,0.97);z-index:100;
+    flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;}
+  #overlay.show{display:flex;}
+  #overlay-title{font-family:'Special Elite',serif;font-size:28px;color:var(--accent);
+    text-shadow:0 0 20px rgba(200,56,10,0.5);margin-bottom:9px;line-height:1.2;}
+  #overlay-subtitle{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:16px;}
+  #overlay-text{max-width:440px;line-height:1.9;color:var(--text);margin-bottom:18px;font-size:12px;}
+  #overlay-stats{font-size:10px;color:var(--text-dim);margin-bottom:16px;line-height:1.8;}
+
+  /* TITLE */
+  #title-screen{position:absolute;inset:0;background:var(--bg);z-index:200;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;}
+  #title-ascii{font-family:'Special Elite',serif;font-size:36px;color:var(--accent);
+    text-shadow:0 0 30px rgba(200,56,10,0.4);letter-spacing:6px;margin-bottom:3px;}
+  #title-sub{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+  #title-location{font-size:10px;color:var(--accent2);letter-spacing:2px;margin-bottom:20px;font-style:italic;}
+  #title-desc{max-width:400px;line-height:1.9;color:var(--text);font-size:12px;margin-bottom:22px;}
+  .drip{font-size:20px;color:var(--blood);letter-spacing:8px;margin-bottom:16px;text-shadow:0 0 10px rgba(107,0,0,0.6);}
+  #title-lang{margin-bottom:12px;}
+  #title-lang button{font-family:'Courier Prime',monospace;font-size:10px;letter-spacing:2px;padding:4px 11px;
+    border:1px solid var(--border);background:var(--panel2);color:var(--text-dim);cursor:pointer;
+    margin:0 3px;text-transform:uppercase;transition:all 0.15s;}
+  #title-lang button.active{border-color:var(--accent2);color:var(--accent);}
+  #title-lang button:hover{color:var(--text-bright);}
+</style>
+</head>
+<body>
+<div id="game-container">
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen">
+    <div class="drip">▼ ▼ ▼ ▼ ▼</div>
+    <div id="title-ascii">ZOMBUTCHER</div>
+    <div id="title-sub" data-t="title_sub"></div>
+    <div id="title-location" data-t="title_location"></div>
+    <div id="title-lang">
+      <button onclick="setLang('en')" id="btn-lang-en" class="active">ENG</button>
+      <button onclick="setLang('ru')" id="btn-lang-ru">РУС</button>
+    </div>
+    <div id="title-desc" data-t="title_desc"></div>
+    <button class="btn btn-primary" onclick="startGame()" style="font-size:13px;padding:8px 24px;" data-t="btn_open_shop"></button>
+  </div>
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div id="phase-indicator"><div id="phase-dot"></div><span id="phase-text"></span></div>
+    <div class="tb-block"><span class="tb-label" data-t="lbl_money"></span><span class="tb-value" id="money-val">$20</span></div>
+    <div class="tb-block"><span class="tb-label" data-t="lbl_suspicion"></span><span class="tb-value" id="susp-val">0%</span></div>
+    <div class="tb-block" id="moro-tb-block" style="display:none;"><span class="tb-label" data-t="lbl_moro_goal"></span><span class="tb-value" id="moro-tb-val">$0</span></div>
+    <div class="tb-block"><span class="tb-label" data-t="lbl_infected"></span><span class="tb-value" id="inf-val" style="color:#7a3a6a;">0</span></div>
+    <button id="lang-btn" onclick="toggleLang()"></button>
+  </div>
+
+  <!-- MORO PROGRESS ROW -->
+  <div id="moro-bar-row">
+    <span id="moro-bar-label" data-t="moro_progress" style="white-space:nowrap;"></span>
+    <div id="moro-bar-wrap"><div id="moro-bar" style="width:0%"></div></div>
+    <span id="moro-stage-label" style="white-space:nowrap;color:var(--moro);"></span>
+  </div>
+
+  <div id="susp-bar-wrap"><div id="susp-bar" style="width:0%"></div></div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="scene">
+      <div id="scene-header"><span id="scene-title-text"></span><span id="act-label"></span></div>
+      <div id="log"></div>
+    </div>
+    <div id="sidebar">
+      <div id="customer-panel">
+        <h3 data-t="lbl_customer"></h3>
+        <div id="customer-name">—</div>
+        <div id="customer-request"></div>
+      </div>
+      <div id="inventory-panel">
+        <h3 data-t="lbl_inventory"></h3>
+        <div id="inv-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottombar">
+    <div id="day-actions" style="display:flex;gap:5px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="btn-sell" onclick="sellSelected()" data-t="btn_sell"></button>
+      <button class="btn" id="btn-skip-cust" onclick="skipCustomer()" data-t="btn_skip"></button>
+      <button class="btn" id="btn-end-day" onclick="endDay()" data-t="btn_end_day"></button>
+      <button class="btn btn-moro" id="btn-visit-moro" onclick="visitMoro()" style="display:none;" data-t="btn_visit_moro"></button>
+    </div>
+    <div id="night-actions">
+      <button class="btn night-btn" onclick="nightAction('hunt')">
+        <span class="n-title" data-t="night_hunt_title"></span>
+        <span class="n-desc" data-t="night_hunt_desc"></span>
+      </button>
+      <button class="btn night-btn" onclick="nightAction('trade')">
+        <span class="n-title" data-t="night_trade_title"></span>
+        <span class="n-desc" data-t="night_trade_desc"></span>
+      </button>
+      <button class="btn night-btn" onclick="nightAction('hide')">
+        <span class="n-title" data-t="night_hide_title"></span>
+        <span class="n-desc" data-t="night_hide_desc"></span>
+      </button>
+      <button class="btn night-btn" onclick="nightAction('skull')" id="btn-skull-order" style="display:none;">
+        <span class="n-title" data-t="night_skull_title"></span>
+        <span class="n-desc" data-t="night_skull_desc"></span>
+      </button>
+    </div>
+    <span id="btn-hint"></span>
+  </div>
+
+  <!-- DIALOGUE PANEL -->
+  <div id="dialogue-panel">
+    <div id="dialogue-speaker"></div>
+    <div id="dialogue-body"></div>
+    <div id="dialogue-footer"></div>
+  </div>
+
+  <!-- OVERLAY -->
+  <div id="overlay">
+    <div id="overlay-title"></div>
+    <div id="overlay-subtitle"></div>
+    <div id="overlay-text"></div>
+    <div id="overlay-stats"></div>
+    <button class="btn btn-primary" onclick="location.reload()" data-t="btn_restart"></button>
+  </div>
+
+</div>
+<script>
+// ══════════════════════════════════════════
+//  LOCALIZATION
+// ══════════════════════════════════════════
+let LANG = 'en';
+
+const T = {
+  en: {
+    title_sub:'Monster Business Simulator',
+    title_location:'Bayhaven, Louisiana — Quarantine Zone',
+    title_desc:`You are Ray. Former butcher. Murdered for debt.<br>
+Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantined city full of monsters.<br><br>
+<span style="color:var(--text-dim);font-size:11px;">Mr. Skull needs you. Dr. Moro can save you.<br>The question is which deal costs more.</span>`,
+    btn_open_shop:'OPEN SHOP',
+    lbl_money:'Money', lbl_suspicion:'Suspicion', lbl_moro_goal:'Dr. Moro', lbl_infected:'Infected',
+    lbl_customer:'Current Customer', lbl_inventory:'Inventory',
+    btn_sell:'Sell', btn_skip:'Skip', btn_end_day:'End Day →', btn_visit_moro:'Visit Dr. Moro', btn_restart:'Start Over',
+    night_hunt_title:'🔪 Hunt', night_hunt_desc:'Get supply. +Suspicion.',
+    night_trade_title:'💰 Trade', night_trade_desc:'Sell organs. +Money.',
+    night_hide_title:'🌑 Lay Low', night_hide_desc:'Clean up. −Suspicion.',
+    night_skull_title:'💀 Mr. Skull', night_skull_desc:'Fill order. +$200–400.',
+    moro_progress:'Antidote:',
+    inv_normal:'Normal Meat', inv_infected:'Infected Meat', inv_human:'★ Special Cut',
+    no_one:'—', no_line:'No one in line.', shop_closed:'— Shop Closed —', city_sleeps:'The city sleeps. Mostly.',
+    hint_sell:'Select meat, then Sell.', hint_no_cust:'No more customers.', hint_night:'Choose tonight\'s action.',
+    hint_day:'Day', hint_night_label:'Night',
+    scene_shop:'BUTCHER SHOP', scene_night:'NIGHT — CHOOSE ACTION',
+    act_labels:['PROLOGUE','ACT I — RESURRECTION','ACT II — BUSINESS IS BUSINESS','ACT III — DR. MORO'],
+    moro_stages:['Stage 1/3','Stage 2/3','Stage 3/3','Complete'],
+  },
+  ru: {
+    title_sub:'Симулятор Монстр-Бизнеса',
+    title_location:'Бэйхэвен, Луизиана — Карантинная зона',
+    title_desc:`Ты — Рэй. Бывший мясник. Убит за долги.<br>
+Воскрешён мутагеном LARVE корпорации ZonTech.<br>Твоя лавка стоит в закрытом городе, полном монстров.<br><br>
+<span style="color:var(--text-dim);font-size:11px;">Мистер Скулл нуждается в тебе. Доктор Моро может тебя спасти.<br>Вопрос в том, какая сделка обойдётся дороже.</span>`,
+    btn_open_shop:'ОТКРЫТЬ ЛАВКУ',
+    lbl_money:'Деньги', lbl_suspicion:'Подозрение', lbl_moro_goal:'Д-р Моро', lbl_infected:'Заражено',
+    lbl_customer:'Покупатель', lbl_inventory:'Запасы',
+    btn_sell:'Продать', btn_skip:'Пропустить', btn_end_day:'Конец дня →', btn_visit_moro:'К доктору Моро', btn_restart:'Начать заново',
+    night_hunt_title:'🔪 Охота', night_hunt_desc:'Пополнить запас. +Подозрение.',
+    night_trade_title:'💰 Торговля', night_trade_desc:'Продать органы. +Деньги.',
+    night_hide_title:'🌑 Залечь', night_hide_desc:'Убраться. −Подозрение.',
+    night_skull_title:'💀 Мистер Скулл', night_skull_desc:'Выполнить заказ. +$200–400.',
+    moro_progress:'Антидот:',
+    inv_normal:'Обычное мясо', inv_infected:'Заражённое мясо', inv_human:'★ Особый срез',
+    no_one:'—', no_line:'Никого в очереди.', shop_closed:'— Лавка закрыта —', city_sleeps:'Город спит. Почти.',
+    hint_sell:'Выбери мясо, затем Продать.', hint_no_cust:'Покупателей больше нет.', hint_night:'Выбери действие на ночь.',
+    hint_day:'День', hint_night_label:'Ночь',
+    scene_shop:'МЯСНАЯ ЛАВКА', scene_night:'НОЧЬ — ВЫБОР ДЕЙСТВИЯ',
+    act_labels:['ПРОЛОГ','АКТ I — ВОСКРЕШЕНИЕ','АКТ II — БИЗНЕС ИДЁТ','АКТ III — ДОКТОР МОРО'],
+    moro_stages:['Этап 1/3','Этап 2/3','Этап 3/3','Завершено'],
+  }
+};
+
+function t(k){ return (T[LANG][k] !== undefined ? T[LANG][k] : (T.en[k] || k)); }
+
+function applyLang(){
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const k = el.getAttribute('data-t');
+    el.innerHTML = t(k);
+  });
+  document.getElementById('btn-lang-en').className = LANG==='en'?'active':'';
+  document.getElementById('btn-lang-ru').className = LANG==='ru'?'active':'';
+  document.getElementById('lang-btn').textContent  = LANG==='en'?'RU':'EN';
+  // sync inventory names
+  G.inventory.normal.name   = t('inv_normal');
+  G.inventory.infected.name = t('inv_infected');
+  G.inventory.human.name    = t('inv_human');
+  if(G.phase) { renderInventory(); renderCustomer(); updateSceneHeader(); updateMoroBar(); }
+}
+function setLang(l){ LANG=l; applyLang(); }
+function toggleLang(){ setLang(LANG==='en'?'ru':'en'); }
+
+// ══════════════════════════════════════════
+//  CONTENT TABLES
+// ══════════════════════════════════════════
+const NAMES = {
+  en:['Mrs. Hoffmann','Mr. Brecht','Old Pete','Sister Agatha','Nurse Helga',
+      'Doktor Voss','The Janitor','Ms. Kravitz','Bruno','Father Stein',
+      'Little Timmy','Deputy Walsh','Evangeline'],
+  ru:['Миссис Хоффманн','Господин Брехт','Старый Пётр','Сестра Агата',
+      'Медсестра Хельга','Доктор Фосс','Уборщик','Мисс Кравиц',
+      'Бруно','Отец Штайн','Маленький Тимми','Помощник Уолш','Эванджелин'],
+};
+const REQUESTS = {
+  en:[
+    {text:'"Something cheap, please."',         prefers:'cheap',   budget:6},
+    {text:'"Give me the freshest you have."',   prefers:'fresh',   budget:25},
+    {text:'"Just the usual, Ray."',             prefers:'normal',  budget:10},
+    {text:'"Something... special."',            prefers:'special', budget:22},
+    {text:'"I don\'t really care what it is."', prefers:'any',     budget:15},
+    {text:'"My family needs a lot this week."', prefers:'bulk',    budget:18},
+    {text:'"ZonTech rations again. Give me anything."',prefers:'any',budget:20},
+  ],
+  ru:[
+    {text:'"Что-нибудь подешевле, пожалуйста."',  prefers:'cheap',   budget:6},
+    {text:'"Дайте самое свежее, что есть."',       prefers:'fresh',   budget:25},
+    {text:'"Как обычно, Рэй."',                    prefers:'normal',  budget:10},
+    {text:'"Что-нибудь... особенное."',             prefers:'special', budget:22},
+    {text:'"Мне всё равно, что это."',              prefers:'any',     budget:15},
+    {text:'"Семье нужно побольше на эту неделю."', prefers:'bulk',    budget:18},
+    {text:'"Снова пайки ZonTech. Дайте хоть что-нибудь."',prefers:'any',budget:20},
+  ]
+};
+
+// ══════════════════════════════════════════
+//  SKULL LORE LINES
+// ══════════════════════════════════════════
+const SKULL_LORE = {
+  en:[
+    '"Before the Outbreak I handled logistics for ZonTech. Funny how things change."',
+    '"There\'s a doctor in the old clinic. They say he worked on LARVE before the Breach."',
+    '"Lady Croc cleared the east bridge last night. Efficient. Excessive."',
+    '"Labévil keeps asking for a cape. I said no. They\'re wearing one anyway."',
+    '"ZonTech\'s containment protocol extends underground. Interesting choice."',
+    '"The Wrinkleface found the east sewer. We have infrastructure now."',
+  ],
+  ru:[
+    '"До Прорыва я занимался логистикой в ZonTech. Забавно, как всё меняется."',
+    '"В старой клинике есть доктор. Говорят, он работал с LARVE до Прорыва."',
+    '"Леди Крок прошлой ночью расчистила восточный мост. Эффективно. Избыточно."',
+    '"Лабевил снова просит плащ. Я сказал нет. Они всё равно его носят."',
+    '"Протокол сдерживания ZonTech уходит под землю. Интересный выбор."',
+    '"Сморщерож нашёл восточный коллектор. Теперь у нас есть инфраструктура."',
+  ]
+};
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+const G = {
+  day:1, phase:'', act:0,
+  money:20, suspicion:0, infected:0,
+  moroStage:0, moroPaid:0,
+  skullOrders:0, skullOrderReady:false,
+  inventory:{
+    normal:  {name:'Normal Meat',  count:8,  price:8,  infects:false, unlocked:true},
+    infected:{name:'Infected Meat',count:4,  price:5,  infects:true,  unlocked:true},
+    human:   {name:'★ Special Cut',count:0,  price:20, infects:true,  unlocked:false},
+  },
+  customers:[], currentCustomer:null,
+  customersServed:0, customersTotal:0,
+  selectedMeat:null, gameOver:false,
+};
+
+// ══════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════
+function log(text, cls='log-system'){
+  const el=document.createElement('div');
+  el.className='log-entry '+cls; el.innerHTML=text;
+  const logEl=document.getElementById('log');
+  logEl.appendChild(el); logEl.scrollTop=logEl.scrollHeight;
+}
+function logSep(){
+  const el=document.createElement('div');
+  el.className='log-entry log-separator';
+  document.getElementById('log').appendChild(el);
+}
+
+// ══════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════
+function updateUI(){
+  normalizeSelectedMeat();
+  G.inventory.normal.name   = t('inv_normal');
+  G.inventory.infected.name = t('inv_infected');
+  G.inventory.human.name    = t('inv_human');
+
+  document.getElementById('money-val').textContent = '$'+G.money;
+  document.getElementById('susp-val').textContent  = G.suspicion+'%';
+  document.getElementById('inf-val').textContent   = G.infected;
+  document.getElementById('susp-bar').style.width  = Math.min(G.suspicion,100)+'%';
+
+  const isDay = G.phase==='day';
+  document.getElementById('day-actions').style.display   = isDay?'flex':'none';
+  document.getElementById('night-actions').style.display = isDay?'none':'flex';
+  document.getElementById('phase-dot').className = isDay?'':'night';
+  document.getElementById('phase-text').textContent = t(isDay?'hint_day':'hint_night_label')+' '+G.day;
+
+  document.getElementById('btn-skull-order').style.display = (G.act>=2&&G.skullOrderReady)?'block':'none';
+  document.getElementById('btn-visit-moro').style.display  = (G.moroStage>=1&&G.moroStage<4)?'inline-block':'none';
+
+  updateMoroBar(); updateSceneHeader(); renderInventory(); renderCustomer();
+}
+
+function normalizeSelectedMeat(){
+  if(!G.selectedMeat) return;
+  const item=G.inventory[G.selectedMeat];
+  if(!item || !item.unlocked || item.count<=0) G.selectedMeat=null;
+}
+
+function updateSceneHeader(){
+  const acts = t('act_labels');
+  document.getElementById('act-label').textContent = acts[G.act]||'';
+  document.getElementById('scene-title-text').textContent =
+    G.phase==='night' ? t('scene_night') : t('scene_shop')+' — '+t('hint_day')+' '+G.day;
+}
+
+function updateMoroBar(){
+  const row=document.getElementById('moro-bar-row');
+  const blk=document.getElementById('moro-tb-block');
+  if(G.moroStage<1){row.style.display='none';blk.style.display='none';return;}
+  row.style.display='flex'; blk.style.display='flex';
+  const goals=[1500,3000,4500];
+  const goal=goals[Math.min(G.moroStage-1,2)];
+  const pct=Math.min(G.moroPaid/goal*100,100);
+  document.getElementById('moro-bar').style.width=pct+'%';
+  document.getElementById('moro-bar-label').textContent=t('moro_progress');
+  document.getElementById('moro-tb-val').textContent='$'+G.moroPaid;
+  document.getElementById('moro-stage-label').textContent=t('moro_stages')[Math.min(G.moroStage-1,3)];
+}
+
+function renderInventory(){
+  const list=document.getElementById('inv-list'); list.innerHTML='';
+  for(const [key,item] of Object.entries(G.inventory)){
+    if(!item.unlocked) continue;
+    const div=document.createElement('div');
+    div.className='inv-item'+(G.selectedMeat===key?' selected':'')+(item.count===0?' disabled':'');
+    div.onclick=()=>{if(item.count===0)return;G.selectedMeat=G.selectedMeat===key?null:key;renderInventory();};
+    div.innerHTML=`<div><div class="inv-name">${item.name}</div><div class="inv-price">$${item.price}</div></div><div class="inv-count">${item.count}</div>`;
+    list.appendChild(div);
+  }
+}
+
+function renderCustomer(){
+  const c=G.currentCustomer;
+  if(!c||G.phase==='night'){
+    document.getElementById('customer-name').textContent=G.phase==='night'?t('shop_closed'):t('no_one');
+    document.getElementById('customer-request').textContent=G.phase==='night'?t('city_sleeps'):t('no_line');
+    return;
+  }
+  document.getElementById('customer-name').textContent=c.name;
+  document.getElementById('customer-request').textContent=c.request ?? c.text ?? '';
+}
+
+// ══════════════════════════════════════════
+//  DIALOGUE
+// ══════════════════════════════════════════
+function showDialogue(speaker, color, bodyHtml, buttons){
+  const panel=document.getElementById('dialogue-panel');
+  const sp=document.getElementById('dialogue-speaker');
+  const body=document.getElementById('dialogue-body');
+  const foot=document.getElementById('dialogue-footer');
+  sp.textContent=speaker; sp.style.color=color||'var(--text-bright)';
+  body.innerHTML=bodyHtml; foot.innerHTML='';
+  buttons.forEach(b=>{
+    const btn=document.createElement('button');
+    btn.className='btn '+(b.cls||'');
+    btn.textContent=b.label;
+    btn.onclick=()=>{panel.classList.remove('show');b.action();};
+    foot.appendChild(btn);
+  });
+  panel.classList.add('show');
+}
+
+// ══════════════════════════════════════════
+//  START
+// ══════════════════════════════════════════
+function startGame(){
+  document.getElementById('title-screen').style.display='none';
+  G.act=1;
+  G.inventory.normal.name   = t('inv_normal');
+  G.inventory.infected.name = t('inv_infected');
+  G.inventory.human.name    = t('inv_human');
+
+  const body_en=`<p>The basement door shudders. Something knocks — three slow, deliberate taps.</p>
+<p>A figure steps into the light. Or what's left of it. The skull-shaped head tilts sideways, and it speaks in a voice that sounds like gravel in a coffee can.</p>
+<p><em>"Ray. Don't be alarmed. That nose of mine is... calibrated for things like you. Half-alive. Quite useful."</em></p>
+<p><em>"ZonTech patrols every block. But you look human. You have a shop. I have hungry clients."</em></p>
+<p><em>"You supply meat. My people stay quiet about your condition. ZonTech doesn't come knocking."</em></p>
+<p><span style="color:var(--text-dim)">He extends a hand. It is not the hand of something alive.<br>Strictly business. Nothing personal.</span></p>`;
+
+  const body_ru=`<p>Дверь подвала дрожит. Три медленных, намеренных удара.</p>
+<p>Фигура выходит на свет. Голова в форме черепа наклоняется набок, и раздаётся голос — гравий в банке из-под кофе.</p>
+<p><em>«Рэй. Не пугайся. Мой нюх... откалиброван под таких, как ты. Полуживой. Весьма полезно.»</em></p>
+<p><em>«ZonTech патрулирует каждый квартал. Но ты выглядишь как человек. У тебя есть лавка. У меня — голодные клиенты.»</em></p>
+<p><em>«Ты поставляешь мясо. Мои люди молчат о твоём состоянии. ZonTech не стучится.»</em></p>
+<p><span style="color:var(--text-dim)">Он протягивает руку. Это не рука живого существа.<br>Чисто деловая сделка. Ничего личного.</span></p>`;
+
+  showDialogue('Mr. Skull / Мистер Скулл','var(--skull)',
+    LANG==='en'?body_en:body_ru,
+    [{
+      label:LANG==='en'?'Accept the deal':'Принять сделку',
+      cls:'btn-primary',
+      action:()=>{
+        G.skullOrderReady=true;
+        log(LANG==='en'
+          ?'Mr. Skull disappears into the basement. The door stays unlocked.'
+          :'Мистер Скулл исчезает в подвале. Дверь остаётся незапертой.','log-skull');
+        startDay();
+      }
+    }]
+  );
+}
+
+// ══════════════════════════════════════════
+//  CUSTOMERS
+// ══════════════════════════════════════════
+function customerAccepts(c,key){
+  const p=G.inventory[key].price, pref=c.prefers;
+  if(pref==='any'||pref==='bulk') return true;
+  if(pref==='cheap')   return p<=7;
+  if(pref==='fresh')   return key==='normal'||key==='human';
+  if(pref==='normal')  return key==='normal'||key==='infected';
+  if(pref==='special') return key==='human'||key==='infected';
+  return true;
+}
+
+function generateCustomers(){
+  const count=Math.min(3+Math.floor(G.day*1.1),9);
+  G.customersTotal=count; G.customersServed=0; G.customers=[];
+  const reqs=REQUESTS[LANG]; const names=NAMES[LANG];
+  for(let i=0;i<count;i++){
+    const r=reqs[Math.floor(Math.random()*reqs.length)];
+    G.customers.push({
+      name:names[Math.floor(Math.random()*names.length)],
+      ...r,
+      request:r.request ?? r.text ?? '',
+    });
+  }
+}
+
+// ══════════════════════════════════════════
+//  DAY PHASE
+// ══════════════════════════════════════════
+function startDay(){
+  G.phase='day';
+
+  // Unlock human meat
+  if(!G.inventory.human.unlocked && G.skullOrders>=2){
+    G.inventory.human.unlocked=true;
+    log(LANG==='en'
+      ?'A cold package appeared by the basement door. No label. The smell is... distinct.'
+      :'У двери подвала появился холодный пакет. Без этикетки. Запах... специфический.','log-bad');
+  }
+
+  // Act progression
+  if(G.day>=2&&G.act<2){
+    G.act=2; logSep();
+    log(LANG==='en'
+      ?'<em style="color:var(--accent)">ZonTech speakers: "Residents are reminded — all biological material must be reported to Zone Authority."</em>'
+      :'<em style="color:var(--accent)">Громкоговорители ZonTech: «Напоминаем: вся биологическая материя должна быть сообщена Зональной администрации.»</em>','log-lore');
+  }
+  if(G.day>=5&&G.act<3){
+    G.act=3; G.moroStage=1; logSep();
+    log(LANG==='en'
+      ?'<span style="color:var(--moro)">Word on the street: a doctor in the old clinic. Someone who worked on LARVE before the Breach. Someone who might know what you are.</span>'
+      :'<span style="color:var(--moro)">Слухи: в старой клинике есть доктор. Кто-то, кто работал с LARVE до Прорыва. Кто-то, кто знает, что ты такое.</span>','log-moro');
+    document.getElementById('btn-visit-moro').style.display='inline-block';
+  }
+
+  // Restock
+  G.inventory.normal.count  += Math.floor(3+Math.random()*3);
+  G.inventory.infected.count += Math.floor(1+Math.random()*2);
+
+  generateCustomers(); nextCustomer();
+  document.getElementById('btn-hint').textContent=t('hint_sell');
+  updateUI();
+
+  if(G.day===1){
+    logSep();
+    log(LANG==='en'
+      ?'The shop opens. ZonTech soldiers change shifts outside. Business is business.'
+      :'Лавка открывается. Солдаты ZonTech снаружи меняют смену. Бизнес есть бизнес.','log-system');
+    log(LANG==='en'
+      ?'<span style="color:var(--text-dim)">[ A ZonTech poster on the wall: "BAYHAVEN IS SAFE. TRUST THE PROCESS." ]</span>'
+      :'<span style="color:var(--text-dim)">[ Плакат ZonTech на стене: «БЭЙХЭВЕН В БЕЗОПАСНОСТИ. ДОВЕРЯЙТЕ ПРОЦЕССУ.» ]</span>','log-lore');
+  } else {
+    logSep();
+    log((LANG==='en'?'Day ':'День ')+G.day+(LANG==='en'?'. Open for business.':'. Лавка открыта.'),'log-system');
+
+    // Random lore drops
+    const lore_en=[
+      '[ A crumpled ZonTech memo on the floor: "LARVE dispersal rate exceeds projections." ]',
+      '[ Someone carved into the counter: "WHERE IS MY HUSBAND" ]',
+      '[ You can hear the perimeter wall hum. It does that at night. ]',
+      '[ A flyer in the street: "MISSING: EVANGELINE DUPRE". The photo is outdated. ]',
+      '[ Outside: three ZonTech hazmat suits walk past without looking in. ]',
+    ];
+    const lore_ru=[
+      '[ Скомканная памятка ZonTech: «Скорость распространения LARVE превысила прогнозы.» ]',
+      '[ Кто-то вырезал в прилавке: «ГДЕ МОЙ МУЖ» ]',
+      '[ Слышно гудение стены периметра. Так бывает ночью. ]',
+      '[ Листовка на улице: «ПРОПАЛА: ЭВАНДЖЕЛИН ДЮПРЕ». Фото устаревшее. ]',
+      '[ Снаружи: три костюма химзащиты прошли мимо, не заглянув внутрь. ]',
+    ];
+    if(Math.random()<0.5){
+      const pool=LANG==='en'?lore_en:lore_ru;
+      log('<span style="color:var(--text-dim)">'+pool[G.day%pool.length]+'</span>','log-lore');
+    }
+  }
+}
+
+function nextCustomer(){
+  if(G.customers.length===0){
+    G.currentCustomer=null;
+    document.getElementById('btn-sell').disabled=true;
+    document.getElementById('btn-skip-cust').disabled=true;
+    document.getElementById('btn-hint').textContent=t('hint_no_cust');
+    updateUI(); return;
+  }
+  G.currentCustomer=G.customers.shift();
+  document.getElementById('btn-sell').disabled=false;
+  document.getElementById('btn-skip-cust').disabled=false;
+  log('<span style="color:var(--accent)">'+G.currentCustomer.name+'</span>'+(LANG==='en'?' enters. ':' входит. ')+(G.currentCustomer.request ?? G.currentCustomer.text ?? ''),'log-customer');
+  updateUI();
+}
+
+function sellSelected(){
+  if(!G.currentCustomer) return log(LANG==='en'?'Nobody to sell to.':'Некому продавать.','log-system');
+  if(!G.selectedMeat)    return log(LANG==='en'?'Select something first.':'Сначала выбери товар.','log-system');
+  const item=G.inventory[G.selectedMeat];
+  if(item.count===0) return log((LANG==='en'?'Out of ':'Закончилось: ')+item.name+'.','log-bad');
+  const c=G.currentCustomer;
+  if(!customerAccepts(c,G.selectedMeat)||(item.price>c.budget&&c.prefers==='cheap')){
+    log(c.name+(LANG==='en'?' shakes their head.':' качает головой.'),'log-bad');
+    skipCustomer(); return;
+  }
+  item.count--; G.money+=item.price; G.customersServed++;
+  if(item.infects){
+    G.infected++;
+    const msgs_en=[c.name+' takes the package. Looks satisfied. Shouldn\'t be.',c.name+' tucks it away. Humming.',c.name+' notices nothing unusual. Good.'];
+    const msgs_ru=[c.name+' берёт пакет. Выглядит довольным. Напрасно.',c.name+' убирает его. Напевает.',c.name+' ничего не замечает. Хорошо.'];
+    log((LANG==='en'?msgs_en:msgs_ru)[Math.floor(Math.random()*3)],'log-result');
+  } else {
+    const msgs_en=[c.name+' nods and pays. <em>"Always the best here."</em>',c.name+' seems pleased. <em>"Same time next week."</em>'];
+    const msgs_ru=[c.name+' кивает и платит. <em>«Здесь всегда лучший товар.»</em>',c.name+' доволен. <em>«До следующей недели.»</em>'];
+    log((LANG==='en'?msgs_en:msgs_ru)[Math.floor(Math.random()*2)],'log-result');
+  }
+  updateUI(); nextCustomer();
+}
+
+function skipCustomer(){
+  if(!G.currentCustomer) return;
+  log(G.currentCustomer.name+(LANG==='en'?' leaves empty-handed.':' уходит ни с чем.'),'log-system');
+  G.currentCustomer=null; updateUI(); nextCustomer();
+}
+
+function endDay(){
+  if(G.infected>5)  G.suspicion+=2;
+  if(G.infected>12) G.suspicion+=3;
+  logSep();
+  log(LANG==='en'?'You close the shutters. Another day in Bayhaven.':'Закрываешь ставни. Ещё один день в Бэйхэвене.','log-system');
+  log((LANG==='en'?'Register: ':'В кассе: ')+'<span style="color:var(--money)">$'+G.money+'</span>','log-system');
+  G.phase='night'; G.day++;
+  G.skullOrderReady=(G.act>=2);
+  document.getElementById('btn-hint').textContent=t('hint_night');
+  updateUI(); logSep();
+  const pool_en=['The ZonTech searchlights sweep the rooftops.','Fog from the swamp. Thick.','A siren from the perimeter. Shift change.','The streetlights flicker once. Then hold.'];
+  const pool_ru=['Прожекторы ZonTech обшаривают крыши.','Туман с болота. Густой.','Сирена с периметра. Смена охраны.','Фонари мигают раз. Потом держатся.'];
+  log((LANG==='en'?pool_en:pool_ru)[G.day%4],'log-night');
+  checkEndConditions();
+}
+
+// ══════════════════════════════════════════
+//  NIGHT ACTIONS
+// ══════════════════════════════════════════
+function nightAction(action){
+  if(G.phase!=='night') return;
+
+  if(action==='hunt'){
+    const caught=Math.random()<(G.suspicion/200);
+    if(caught){
+      G.suspicion+=20;
+      log(LANG==='en'?'Something went wrong. Came back empty-handed. Someone saw you.':'Что-то пошло не так. Вернулся пустым. Кто-то видел.','log-bad');
+      log('<span style="color:var(--accent)">'+(LANG==='en'?'Suspicion +20.':'Подозрение +20.')+'</span>','log-bad');
+    } else {
+      const gain=2+Math.floor(Math.random()*2);
+      G.inventory.human.count+=gain;
+      if(!G.inventory.human.unlocked) G.inventory.human.unlocked=true;
+      G.suspicion+=10;
+      log(LANG==='en'?'A productive night. The cooler is stocked. Best not to think about it.':'Продуктивная ночь. Холодильник пополнен. Лучше не думать.','log-night');
+      log((LANG==='en'?'Got ':'Получено ')+gain+(LANG==='en'?' unit(s). Suspicion +10.':' ед. Подозрение +10.'),'log-night');
+    }
+  } else if(action==='trade'){
+    const earn=35+Math.floor(Math.random()*20);
+    G.money+=earn; G.suspicion+=5;
+    log(LANG==='en'?'Back-alley deal. Cash changes hands. No names.':'Сделка в переулке. Деньги перешли. Без имён.','log-night');
+    log((LANG==='en'?'Earned ':'Заработано ')+'<span style="color:var(--money)">$'+earn+'</span>'+(LANG==='en'?'. Suspicion +5.':'. Подозрение +5.'),'log-night');
+  } else if(action==='hide'){
+    const r=12+Math.floor(Math.random()*8);
+    G.suspicion=Math.max(0,G.suspicion-r);
+    log(LANG==='en'?'Stayed inside. Cleaned. Burned some things. Felt almost normal.':'Остался внутри. Убрался. Сжёг кое-что. Почти нормально.','log-night');
+    log((LANG==='en'?'Suspicion ':'Подозрение ')+'<span style="color:var(--green-bright)">−'+r+'</span>.','log-night');
+  } else if(action==='skull'){
+    if(!G.skullOrderReady) return;
+    const avail=G.inventory.human.count+G.inventory.infected.count;
+    if(avail<2){
+      log(LANG==='en'?'Not enough supply for the order. Hunt first.':'Не хватает запасов для заказа. Сначала поохоться.','log-bad');
+      return;
+    }
+    G.skullOrderReady=false;
+    let need=2;
+    const useH=Math.min(G.inventory.human.count,need);
+    G.inventory.human.count-=useH; need-=useH;
+    G.inventory.infected.count-=need;
+    const earn=200+Math.floor(Math.random()*200);
+    G.money+=earn; G.skullOrders++;
+    log(LANG==='en'?'The basement door opens. The order is taken in silence.':'Дверь подвала открывается. Заказ забирают молча.','log-skull');
+    log('<span style="color:var(--skull)">Mr. Skull: </span>'+(LANG==='en'
+      ?'"Efficient. As always. Here\'s your share."'
+      :'"Эффективно. Как всегда. Вот твоя доля."'),'log-skull');
+    log((LANG==='en'?'Earned ':'Заработано ')+'<span style="color:var(--money)">$'+earn+'</span>.','log-result');
+    const lore=SKULL_LORE[LANG][G.skullOrders%SKULL_LORE.en.length];
+    setTimeout(()=>log('<span style="color:var(--skull)">Mr. Skull: </span><em>'+lore+'</em>','log-lore'),700);
+  }
+
+  updateUI(); checkEndConditions();
+  if(!G.gameOver) setTimeout(startDay,500);
+}
+
+// ══════════════════════════════════════════
+//  DR. MORO
+// ══════════════════════════════════════════
+function visitMoro(){
+  if(G.moroStage<1||G.moroStage>=4) return;
+  const canPay=G.money>=1500;
+
+  const dialogues={
+    en:{
+      1:{
+        body:`<p>The clinic smells of formaldehyde and something worse. A thin man in a stained coat looks up from a microscope.</p>
+<p><em>"Ray. I know what you are. LARVE reanimated you — and left a chemical signature I can identify."</em></p>
+<p><em>"My name is Dr. Moro. I was a ZonTech consultant before the Breach. They know I have the antidote formula. That's why I'm still alive in this city."</em></p>
+<p><em>"I can synthesize an antidote. Three stages. $1,500 each. First I need reagents and a blood sample."</em></p>
+<p><span style="color:var(--text-dim)">Total: $4,500 across three payments. Current stage: $1,500.</span></p>`,
+        pay:'Pay $1,500 — Stage 1', later:'Come back later'
+      },
+      2:{
+        body:`<p>Moro adjusts his glasses without looking up from his notes.</p>
+<p><em>"Blood analysis is complete. LARVE bonded to your neural tissue — that's why you retained cognition. Unusual case."</em></p>
+<p><em>"Stage two requires a synthetic compound. I need someone on the outside. Another $1,500."</em></p>
+<p><span style="color:var(--text-dim)">Current goal: $3,000 total.</span></p>`,
+        pay:'Pay $1,500 — Stage 2', later:'Not yet'
+      },
+      3:{
+        body:`<p>Moro holds a small vial to the light. Something shifts inside it.</p>
+<p><em>"The final synthesis is ready. Or close enough."</em></p>
+<p><em>"This compound will neutralize LARVE in your system — if it works as modeled."</em></p>
+<p><em>"I said 'if.' Don't look at me like that. $1,500. My last fee."</em></p>
+<p><span style="color:var(--text-dim)">Final payment. Total: $4,500.</span></p>`,
+        pay:'Pay $1,500 — Final Stage', later:'Not yet'
+      }
+    },
+    ru:{
+      1:{
+        body:`<p>Клиника пахнет формальдегидом и чем-то похуже. Худой мужчина в запятнанном халате поднимает взгляд от микроскопа.</p>
+<p><em>«Рэй. Я знаю, что ты такое. LARVE реанимировал тебя и оставил химическую сигнатуру, которую я умею читать.»</em></p>
+<p><em>«Меня зовут доктор Моро. До Прорыва я консультировал ZonTech. Они знают, что у меня есть формула антидота. Поэтому я ещё живу в этом городе.»</em></p>
+<p><em>«Я могу синтезировать антидот. Три этапа. По $1500 каждый. Сначала нужны реактивы и образец крови.»</em></p>
+<p><span style="color:var(--text-dim)">Итого: $4500 в три платежа. Текущий этап: $1500.</span></p>`,
+        pay:'Заплатить $1500 — Этап 1', later:'Вернуться позже'
+      },
+      2:{
+        body:`<p>Моро поправляет очки, не поднимая взгляда от записей.</p>
+<p><em>«Анализ крови готов. LARVE связался с нейронной тканью — поэтому ты сохранил рассудок. Необычный случай.»</em></p>
+<p><em>«Второй этап требует синтетического компонента. Нужно договориться с кем-то снаружи. Ещё $1500.»</em></p>
+<p><span style="color:var(--text-dim)">Текущая цель: суммарно $3000.</span></p>`,
+        pay:'Заплатить $1500 — Этап 2', later:'Ещё не сейчас'
+      },
+      3:{
+        body:`<p>Моро держит маленький пузырёк на свету. Что-то внутри движется.</p>
+<p><em>«Финальный синтез готов. Или почти.»</em></p>
+<p><em>«Это вещество нейтрализует LARVE в твоей системе — если работает так, как в модели.»</em></p>
+<p><em>«Я сказал "если". Не смотри на меня так. $1500. Последний платёж.»</em></p>
+<p><span style="color:var(--text-dim)">Финальный платёж. Итого: $4500.</span></p>`,
+        pay:'Заплатить $1500 — Финальный этап', later:'Ещё не сейчас'
+      }
+    }
+  };
+
+  const d=dialogues[LANG][G.moroStage]; if(!d) return;
+  const btns=[];
+  if(canPay){
+    btns.push({label:d.pay,cls:'btn-moro',action:()=>payMoro()});
+  } else {
+    btns.push({label:LANG==='en'?'Need $1,500 (short by $'+(1500-G.money)+')':'Нужно $1500 (не хватает $'+(1500-G.money)+')',cls:'',action:()=>{}});
+  }
+  btns.push({label:d.later,cls:'',action:()=>{}});
+  showDialogue('Dr. Moro','var(--moro)',d.body,btns);
+}
+
+function payMoro(){
+  if(G.money<1500) return;
+  G.money-=1500; G.moroPaid+=1500; G.moroStage++;
+  if(G.moroStage===4){
+    log(LANG==='en'
+      ?'Dr. Moro hands you a small vial. Cold to the touch.'
+      :'Доктор Моро протягивает тебе маленький пузырёк. Холодный на ощупь.','log-moro');
+    logSep(); updateUI();
+    setTimeout(showFinalChoice,400);
+  } else {
+    const msgs_en=[
+      'Moro takes the money. "Come back in a few days."',
+      'Moro nods. "Synthesis is proceeding. Almost there."',
+    ];
+    const msgs_ru=[
+      'Моро берёт деньги. «Вернись через несколько дней.»',
+      'Моро кивает. «Синтез идёт. Почти готово.»',
+    ];
+    log('<span style="color:var(--moro)">Dr. Moro: </span>'+(LANG==='en'?msgs_en:msgs_ru)[G.moroStage-2],'log-moro');
+    updateUI();
+  }
+}
+
+function showFinalChoice(){
+  const body_en=`<p>The vial is in your hand. One dose. Dr. Moro watches from across the room.</p>
+<p><em>"It's yours, Ray. I kept my end."</em></p>
+<p>Outside, ZonTech broadcasts something about <em>"successful containment."</em><br>The streets tell a different story.</p>
+<p><strong>What do you do with the cure?</strong></p>`;
+  const body_ru=`<p>Пузырёк в твоей руке. Одна доза. Доктор Моро смотрит с другого конца комнаты.</p>
+<p><em>«Он твой, Рэй. Я выполнил свою часть.»</em></p>
+<p>Снаружи ZonTech транслирует что-то об <em>«успешном сдерживании.»</em><br>Улицы говорят об обратном.</p>
+<p><strong>Что ты делаешь с антидотом?</strong></p>`;
+  showDialogue('Dr. Moro — Final','var(--moro)',
+    LANG==='en'?body_en:body_ru,
+    [
+      {label:LANG==='en'?'Drink it. Become human.':'Выпить. Стать человеком.',cls:'btn-primary',action:()=>triggerEnding('cured')},
+      {label:LANG==='en'?'Replicate it. Cure everyone.':'Воспроизвести. Вылечить всех.',cls:'btn-moro',action:()=>triggerEnding('cure_all')},
+    ]
+  );
+}
+
+// ══════════════════════════════════════════
+//  END CONDITIONS
+// ══════════════════════════════════════════
+function checkEndConditions(){
+  if(G.gameOver) return;
+  if(G.suspicion>=100)    { triggerEnding('arrested');  return; }
+  if(G.infected>=20)      { triggerEnding('liberation'); return; }
+  if(G.infected>=12&&G.suspicion<55&&G.act>=3&&G.day>=8) { triggerEnding('parasite'); return; }
+}
+
+function triggerEnding(type){
+  G.gameOver=true;
+  const E={
+    en:{
+      arrested:{
+        title:'LIGHTS OUT.',sub:'— ENDING: ZONE AUTHORITY —',
+        text:`Three ZonTech agents and a Hazmat team arrived at dawn. They didn't knock.<br><br>
+The cooler contents were photographed. You were sedated before you could explain anything. Which was probably for the best.<br><br>
+<span style="color:var(--text-dim)">Bayhaven continues. Under new management.</span>`
+      },
+      parasite:{
+        title:"THEY'RE ALL CHANGING.",sub:'— ENDING: SILENT SPREAD —',
+        text:`You never announced it. The infected meat moved through Bayhaven like water through soil — quietly, without ceremony.<br><br>
+Customer by customer. Week by week. ZonTech will notice eventually.<br><br>
+<span style="color:var(--text-dim)">Ray never knew. Or maybe he did. Hard to tell anymore.</span>`
+      },
+      liberation:{
+        title:'THE CITY IS OURS.',sub:'— ENDING: ZOMBIE LIBERATION —',
+        text:`You stopped pretending. The meat went out. The streets changed.<br><br>
+Bayhaven belongs to the undead now. ZonTech's walls are standing, but what's inside them stopped caring about quarantine.<br><br>
+<span style="color:var(--text-dim)">The shop is still open. The clientele has changed considerably.</span>`
+      },
+      cured:{
+        title:'HUMAN. AGAIN.',sub:'— ENDING: THE CURE —',
+        text:`The vial goes down. Tastes like copper and regret.<br><br>
+Three days later, the grey in Ray's skin fades. He looks almost like himself. Almost.<br><br>
+Dr. Moro left for ZonTech's perimeter with a briefcase of data. The shop is still there.<br><br>
+<span style="color:var(--text-dim)">The sign still says "FRESH MEAT DAILY." Some things don't change.</span>`
+      },
+      cure_all:{
+        title:'THE ANTIDOTE SPREADS.',sub:'— ENDING: LIBERATION, REVERSED —',
+        text:`Months. Replicated doses. Back-channel deals through Mr. Skull's network. But it worked.<br><br>
+The monsters of Bayhaven remember being human. Some are grateful. Some are angry. Most are confused.<br><br>
+<span style="color:var(--text-dim)">Ray watches from behind the counter. He still looks tired. Maybe that never fully goes away.</span>`
+      },
+    },
+    ru:{
+      arrested:{
+        title:'ФИНИТА.',sub:'— КОНЦОВКА: ЗОНАЛЬНАЯ ВЛАСТЬ —',
+        text:`Три агента ZonTech и группа химзащиты прибыли на рассвете. Они не стучали.<br><br>
+Содержимое холодильника сфотографировали. Тебя усыпили прежде, чем ты успел объяснить. Что, вероятно, к лучшему.<br><br>
+<span style="color:var(--text-dim)">Бэйхэвен продолжает работу. Под новым руководством.</span>`
+      },
+      parasite:{
+        title:'ОНИ ВСЕ МЕНЯЮТСЯ.',sub:'— КОНЦОВКА: ТИХОЕ РАСПРОСТРАНЕНИЕ —',
+        text:`Ты никогда не объявлял об этом. Заражённое мясо прошло через Бэйхэвен, как вода через почву — тихо, без церемоний.<br><br>
+Покупатель за покупателем. Неделя за неделей. ZonTech заметит. К тому времени будет поздно.<br><br>
+<span style="color:var(--text-dim)">Рэй так и не узнал. Или узнал. Сложно сказать.</span>`
+      },
+      liberation:{
+        title:'ГОРОД НАШ.',sub:'— КОНЦОВКА: ОСВОБОЖДЕНИЕ ЗОМБИ —',
+        text:`Ты перестал притворяться. Мясо разошлось. Улицы изменились.<br><br>
+Бэйхэвен принадлежит нежити. Стены ZonTech стоят, но всем внутри уже не до карантина.<br><br>
+<span style="color:var(--text-dim)">Лавка всё ещё открыта. Клиентура заметно изменилась.</span>`
+      },
+      cured:{
+        title:'СНОВА ЧЕЛОВЕК.',sub:'— КОНЦОВКА: ИСЦЕЛЕНИЕ —',
+        text:`Пузырёк опустел. На вкус — медь и сожаление.<br><br>
+Через три дня серость уходит с кожи Рэя. Он выглядит почти как прежде. Почти.<br><br>
+Доктор Моро ушёл к периметру ZonTech с портфелем данных. Лавка стоит.<br><br>
+<span style="color:var(--text-dim)">На вывеске по-прежнему: «СВЕЖЕЕ МЯСО ЕЖЕДНЕВНО.» Некоторые вещи не меняются.</span>`
+      },
+      cure_all:{
+        title:'АНТИДОТ РАСПРОСТРАНЯЕТСЯ.',sub:'— КОНЦОВКА: ОСВОБОЖДЕНИЕ НАОБОРОТ —',
+        text:`Месяцы. Размноженные дозы. Тайные сделки через сеть Мистера Скулла. Но это сработало.<br><br>
+Монстры Бэйхэвена помнят, как быть людьми. Некоторые благодарны. Некоторые злы. Большинство растеряны.<br><br>
+<span style="color:var(--text-dim)">Рэй смотрит из-за прилавка. Он всё ещё выглядит уставшим. Может, это никогда не проходит полностью.</span>`
+      },
+    }
+  };
+  const e=(E[LANG]||E.en)[type]||(E.en[type]);
+  document.getElementById('overlay-title').textContent=e.title;
+  document.getElementById('overlay-subtitle').textContent=e.sub;
+  document.getElementById('overlay-text').innerHTML=e.text;
+  document.getElementById('overlay-stats').innerHTML=(LANG==='en'
+    ?`Days: ${G.day-1} &nbsp;|&nbsp; Money: $${G.money} &nbsp;|&nbsp; Infected: ${G.infected} &nbsp;|&nbsp; Suspicion: ${G.suspicion}% &nbsp;|&nbsp; Skull orders: ${G.skullOrders}`
+    :`Дней: ${G.day-1} &nbsp;|&nbsp; Деньги: $${G.money} &nbsp;|&nbsp; Заражено: ${G.infected} &nbsp;|&nbsp; Подозрение: ${G.suspicion}% &nbsp;|&nbsp; Заказов Скулла: ${G.skullOrders}`
+  );
+  document.getElementById('overlay').classList.add('show');
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+applyLang();
+</script>
+</body>
+</html>
