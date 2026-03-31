@@ -144,6 +144,189 @@
     margin:0 3px;text-transform:uppercase;transition:all 0.15s;}
   #title-lang button.active{border-color:var(--accent2);color:var(--accent);}
   #title-lang button:hover{color:var(--text-bright);}
+
+  #main, #scene, #sidebar, #inventory-panel, #log {min-height:0;}
+
+  @media (max-width: 720px){
+    body{
+      height:auto;
+      min-height:100dvh;
+      justify-content:flex-start;
+      overflow:auto;
+    }
+
+    #game-container{
+      width:100vw;
+      height:100dvh;
+      border:none;
+      box-shadow:none;
+    }
+
+    #topbar{
+      flex-wrap:wrap;
+    }
+
+    #phase-indicator{
+      width:100%;
+      justify-content:center;
+      border-right:none;
+      border-bottom:1px solid var(--border);
+      padding:7px 10px;
+    }
+
+    .tb-block{
+      flex:1 1 50%;
+      min-width:0;
+      padding:6px 10px;
+    }
+
+    #lang-btn{
+      margin-left:0;
+      width:100%;
+      border-left:none;
+      border-top:1px solid var(--border);
+      padding:8px 10px;
+    }
+
+    #moro-bar-row{
+      flex-wrap:wrap;
+      gap:6px;
+      padding:6px 10px;
+    }
+
+    #moro-bar-wrap{
+      flex-basis:100%;
+      order:3;
+    }
+
+    #main{
+      flex-direction:column;
+    }
+
+    #scene{
+      border-right:none;
+      border-bottom:1px solid var(--border);
+      min-height:42dvh;
+    }
+
+    #sidebar{
+      width:100%;
+      max-height:38dvh;
+    }
+
+    #customer-panel{
+      min-height:auto;
+      padding:7px 10px;
+    }
+
+    #inventory-panel{
+      padding:7px 10px 10px;
+    }
+
+    #bottombar{
+      gap:5px;
+      padding:8px 10px 10px;
+    }
+
+    #day-actions,
+    #night-actions,
+    #dialogue-footer{
+      width:100%;
+    }
+
+    #day-actions .btn,
+    #dialogue-footer .btn{
+      flex:1 1 calc(50% - 5px);
+      min-height:42px;
+      text-align:center;
+    }
+
+    .night-btn{
+      min-width:100%;
+      min-height:54px;
+    }
+
+    #btn-hint{
+      width:100%;
+      margin-left:0;
+      text-align:center;
+    }
+
+    #dialogue-panel,
+    #overlay,
+    #title-screen{
+      padding:18px;
+    }
+
+    #dialogue-speaker{
+      font-size:15px;
+    }
+
+    #dialogue-body,
+    #overlay-text,
+    #title-desc{
+      font-size:11px;
+      line-height:1.7;
+    }
+
+    #overlay-title{
+      font-size:24px;
+    }
+
+    #title-ascii{
+      font-size:28px;
+      letter-spacing:4px;
+    }
+
+    .drip{
+      font-size:16px;
+      letter-spacing:6px;
+    }
+  }
+
+  @media (max-width: 420px){
+    body{
+      font-size:13px;
+    }
+
+    .tb-label,
+    #scene-header,
+    #overlay-subtitle,
+    #title-sub{
+      letter-spacing:2px;
+    }
+
+    .tb-value,
+    #phase-indicator{
+      font-size:13px;
+    }
+
+    #scene-header{
+      padding:5px 8px;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+
+    #log{
+      padding:8px 9px;
+    }
+
+    .log-entry,
+    #customer-request,
+    .inv-item,
+    .btn{
+      font-size:10px;
+    }
+
+    .btn{
+      padding:6px 8px;
+    }
+
+    #title-ascii{
+      font-size:24px;
+      letter-spacing:3px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -578,38 +761,32 @@ function startDay(){
   G.phase='day';
 
   // Unlock human meat
-  if(!G.inventory.human.unlocked && G.skullOrders>=2){
+  const unlockedHumanMeat=!G.inventory.human.unlocked && G.skullOrders>=2;
+  if(unlockedHumanMeat){
     G.inventory.human.unlocked=true;
-    log(LANG==='en'
-      ?'A cold package appeared by the basement door. No label. The smell is... distinct.'
-      :'У двери подвала появился холодный пакет. Без этикетки. Запах... специфический.','log-bad');
   }
 
   // Act progression
-  if(G.day>=2&&G.act<2){
-    G.act=2; logSep();
-    log(LANG==='en'
-      ?'<em style="color:var(--accent)">ZonTech speakers: "Residents are reminded — all biological material must be reported to Zone Authority."</em>'
-      :'<em style="color:var(--accent)">Громкоговорители ZonTech: «Напоминаем: вся биологическая материя должна быть сообщена Зональной администрации.»</em>','log-lore');
+  const reachedAct2=G.day>=2&&G.act<2;
+  if(reachedAct2){
+    G.act=2;
   }
-  if(G.day>=5&&G.act<3){
-    G.act=3; G.moroStage=1; logSep();
-    log(LANG==='en'
-      ?'<span style="color:var(--moro)">Word on the street: a doctor in the old clinic. Someone who worked on LARVE before the Breach. Someone who might know what you are.</span>'
-      :'<span style="color:var(--moro)">Слухи: в старой клинике есть доктор. Кто-то, кто работал с LARVE до Прорыва. Кто-то, кто знает, что ты такое.</span>','log-moro');
+  const reachedAct3=G.day>=5&&G.act<3;
+  if(reachedAct3){
+    G.act=3; G.moroStage=1;
     document.getElementById('btn-visit-moro').style.display='inline-block';
   }
 
   // Restock
-  G.inventory.normal.count  += Math.floor(3+Math.random()*3);
+  const normalRestock=4+Math.floor(G.day/2)+Math.floor(Math.random()*3);
+  G.inventory.normal.count  += normalRestock;
   G.inventory.infected.count += Math.floor(1+Math.random()*2);
 
-  generateCustomers(); nextCustomer();
+  generateCustomers();
   document.getElementById('btn-hint').textContent=t('hint_sell');
   updateUI();
 
   if(G.day===1){
-    logSep();
     log(LANG==='en'
       ?'The shop opens. ZonTech soldiers change shifts outside. Business is business.'
       :'Лавка открывается. Солдаты ZonTech снаружи меняют смену. Бизнес есть бизнес.','log-system');
@@ -617,7 +794,6 @@ function startDay(){
       ?'<span style="color:var(--text-dim)">[ A ZonTech poster on the wall: "BAYHAVEN IS SAFE. TRUST THE PROCESS." ]</span>'
       :'<span style="color:var(--text-dim)">[ Плакат ZonTech на стене: «БЭЙХЭВЕН В БЕЗОПАСНОСТИ. ДОВЕРЯЙТЕ ПРОЦЕССУ.» ]</span>','log-lore');
   } else {
-    logSep();
     log((LANG==='en'?'Day ':'День ')+G.day+(LANG==='en'?'. Open for business.':'. Лавка открыта.'),'log-system');
 
     // Random lore drops
@@ -640,6 +816,26 @@ function startDay(){
       log('<span style="color:var(--text-dim)">'+pool[G.day%pool.length]+'</span>','log-lore');
     }
   }
+
+  if(unlockedHumanMeat){
+    log(LANG==='en'
+      ?'A cold package appeared by the basement door. No label. The smell is... distinct.'
+      :'У двери подвала появился холодный пакет. Без этикетки. Запах... специфический.','log-bad');
+  }
+  if(reachedAct2){
+    logSep();
+    log(LANG==='en'
+      ?'<em style="color:var(--accent)">ZonTech speakers: "Residents are reminded — all biological material must be reported to Zone Authority."</em>'
+      :'<em style="color:var(--accent)">Громкоговорители ZonTech: «Напоминаем: вся биологическая материя должна быть сообщена Зональной администрации.»</em>','log-lore');
+  }
+  if(reachedAct3){
+    logSep();
+    log(LANG==='en'
+      ?'<span style="color:var(--moro)">Word on the street: a doctor in the old clinic. Someone who worked on LARVE before the Breach. Someone who might know what you are.</span>'
+      :'<span style="color:var(--moro)">Слухи: в старой клинике есть доктор. Кто-то, кто работал с LARVE до Прорыва. Кто-то, кто знает, что ты такое.</span>','log-moro');
+  }
+
+  nextCustomer();
 }
 
 function nextCustomer(){
@@ -694,6 +890,10 @@ function endDay(){
   log(LANG==='en'?'You close the shutters. Another day in Bayhaven.':'Закрываешь ставни. Ещё один день в Бэйхэвене.','log-system');
   log((LANG==='en'?'Register: ':'В кассе: ')+'<span style="color:var(--money)">$'+G.money+'</span>','log-system');
   G.phase='night'; G.day++;
+  if(G.day>1&&(G.day-1)%3===0){
+    const infectedDecay=2;
+    G.infected=Math.max(0,G.infected-infectedDecay);
+  }
   G.skullOrderReady=(G.act>=2);
   document.getElementById('btn-hint').textContent=t('hint_night');
   updateUI(); logSep();
