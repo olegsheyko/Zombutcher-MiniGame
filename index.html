@@ -118,6 +118,16 @@
     scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
   #dialogue-body p{margin-bottom:9px;}
   #dialogue-footer{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;}
+  .price-menu-note{color:var(--text-dim);line-height:1.7;margin-bottom:12px;}
+  .price-menu-list{display:flex;flex-direction:column;gap:10px;}
+  .price-menu-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:9px 10px;border:1px solid var(--border);background:var(--panel2);}
+  .price-menu-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .price-menu-name{font-family:'Special Elite',serif;font-size:14px;color:var(--text-bright);}
+  .price-menu-meta{font-size:10px;color:var(--text-dim);line-height:1.5;}
+  .price-menu-alert{font-size:10px;color:var(--accent);}
+  .price-menu-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
+  .price-btn{padding:4px 8px;min-width:32px;text-align:center;}
 
   /* OVERLAY */
   #overlay{display:none;position:absolute;inset:0;background:rgba(5,3,2,0.97);z-index:100;
@@ -197,6 +207,16 @@
     #moro-bar-wrap{
       flex-basis:100%;
       order:3;
+    }
+
+    .price-menu-row{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+
+    .price-menu-controls{
+      width:100%;
+      justify-content:flex-start;
     }
 
     #main{
@@ -389,6 +409,7 @@
     <div id="day-actions" style="display:flex;gap:5px;flex-wrap:wrap;">
       <button class="btn btn-primary" id="btn-sell" onclick="sellSelected()" data-t="btn_sell"></button>
       <button class="btn" id="btn-skip-cust" onclick="skipCustomer()" data-t="btn_skip"></button>
+      <button class="btn" id="btn-price-menu" onclick="openPriceMenu()" data-t="btn_prices"></button>
       <button class="btn" id="btn-end-day" onclick="endDay()" data-t="btn_end_day"></button>
       <button class="btn btn-moro" id="btn-visit-moro" onclick="visitMoro()" style="display:none;" data-t="btn_visit_moro"></button>
     </div>
@@ -446,12 +467,18 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
     btn_open_shop:'OPEN SHOP',
     lbl_money:'Money', lbl_suspicion:'Suspicion', lbl_moro_goal:'Dr. Moro', lbl_infected:'Infected',
     lbl_customer:'Current Customer', lbl_inventory:'Inventory',
-    btn_sell:'Sell', btn_skip:'Skip', btn_end_day:'End Day →', btn_visit_moro:'Visit Dr. Moro', btn_restart:'Start Over',
+    btn_sell:'Sell', btn_skip:'Skip', btn_prices:'Prices', btn_end_day:'End Day →', btn_visit_moro:'Visit Dr. Moro', btn_restart:'Start Over',
     night_hunt_title:'🔪 Hunt', night_hunt_desc:'Get supply. +Suspicion.',
     night_trade_title:'💰 Trade', night_trade_desc:'Sell organs. +Money.',
     night_hide_title:'🌑 Lay Low', night_hide_desc:'Clean up. −Suspicion.',
     night_skull_title:'💀 Mr. Skull', night_skull_desc:'Fill order. +$200–400.',
     moro_progress:'Antidote:',
+    price_menu_title:'Price Board',
+    price_menu_intro:'Adjust today\'s shelf prices here. Market rates shift every couple of days.',
+    price_menu_original:'Market',
+    price_menu_current:'Now',
+    price_menu_reset:'Reset',
+    price_menu_close:'Close',
     inv_normal:'Normal Meat', inv_infected:'Infected Meat', inv_human:'★ Special Cut',
     no_one:'—', no_line:'No one in line.', shop_closed:'— Shop Closed —', city_sleeps:'The city sleeps. Mostly.',
     hint_sell:'Select meat, then Sell.', hint_no_cust:'No more customers.', hint_night:'Choose tonight\'s action.',
@@ -469,12 +496,18 @@ Resurrected by ZonTech's mutagen LARVE.<br>Your shop still stands in a quarantin
     btn_open_shop:'ОТКРЫТЬ ЛАВКУ',
     lbl_money:'Деньги', lbl_suspicion:'Подозрение', lbl_moro_goal:'Д-р Моро', lbl_infected:'Заражено',
     lbl_customer:'Покупатель', lbl_inventory:'Запасы',
-    btn_sell:'Продать', btn_skip:'Пропустить', btn_end_day:'Конец дня →', btn_visit_moro:'К доктору Моро', btn_restart:'Начать заново',
+    btn_sell:'Продать', btn_skip:'Пропустить', btn_prices:'Цены', btn_end_day:'Конец дня →', btn_visit_moro:'К доктору Моро', btn_restart:'Начать заново',
     night_hunt_title:'🔪 Охота', night_hunt_desc:'Пополнить запас. +Подозрение.',
     night_trade_title:'💰 Торговля', night_trade_desc:'Продать органы. +Деньги.',
     night_hide_title:'🌑 Залечь', night_hide_desc:'Убраться. −Подозрение.',
     night_skull_title:'💀 Мистер Скулл', night_skull_desc:'Выполнить заказ. +$200–400.',
     moro_progress:'Антидот:',
+    price_menu_title:'Прайс-лист',
+    price_menu_intro:'Здесь можно менять цены на сегодня. Рынок меняется каждые пару дней.',
+    price_menu_original:'Рынок',
+    price_menu_current:'Сейчас',
+    price_menu_reset:'Сброс',
+    price_menu_close:'Закрыть',
     inv_normal:'Обычное мясо', inv_infected:'Заражённое мясо', inv_human:'★ Особый срез',
     no_one:'—', no_line:'Никого в очереди.', shop_closed:'— Лавка закрыта —', city_sleeps:'Город спит. Почти.',
     hint_sell:'Выбери мясо, затем Продать.', hint_no_cust:'Покупателей больше нет.', hint_night:'Выбери действие на ночь.',
@@ -558,6 +591,13 @@ const SKULL_LORE = {
   ]
 };
 
+const MORO_COSTS = [1000,1500,1750];
+const MORO_GOALS = MORO_COSTS.reduce((totals,cost)=>{
+  totals.push(cost + (totals[totals.length-1] || 0));
+  return totals;
+},[]);
+const MARKET_SWINGS = {normal:2, infected:1, human:4};
+
 // ══════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════
@@ -567,9 +607,9 @@ const G = {
   moroStage:0, moroPaid:0,
   skullOrders:0, skullOrderReady:false,
   inventory:{
-    normal:  {name:'Normal Meat',  count:8,  price:8,  infects:false, unlocked:true},
-    infected:{name:'Infected Meat',count:4,  price:5,  infects:true,  unlocked:true},
-    human:   {name:'★ Special Cut',count:0,  price:20, infects:true,  unlocked:false},
+    normal:  {name:'Normal Meat',  count:8,  price:8,  basePrice:8,  defaultPrice:8,  infects:false, unlocked:true},
+    infected:{name:'Infected Meat',count:4,  price:5,  basePrice:5,  defaultPrice:5,  infects:true,  unlocked:true},
+    human:   {name:'★ Special Cut',count:0,  price:20, basePrice:20, defaultPrice:20, infects:true,  unlocked:false},
   },
   customers:[], currentCustomer:null,
   customersServed:0, customersTotal:0,
@@ -630,13 +670,46 @@ function updateSceneHeader(){
     G.phase==='night' ? t('scene_night') : t('scene_shop')+' — '+t('hint_day')+' '+G.day;
 }
 
+function getMoroStageIndex(stage=G.moroStage){
+  return Math.min(Math.max(stage-1,0),MORO_COSTS.length-1);
+}
+
+function getMoroStageCost(stage=G.moroStage){
+  return MORO_COSTS[getMoroStageIndex(stage)];
+}
+
+function getMoroGoal(stage=G.moroStage){
+  return MORO_GOALS[getMoroStageIndex(stage)];
+}
+
+function rollMarketPrice(key,item){
+  const swing=MARKET_SWINGS[key] ?? 1;
+  const offset=Math.floor(Math.random()*(swing*2+1))-swing;
+  return Math.max(1,item.defaultPrice+offset);
+}
+
+function updateMarketPrices(){
+  let changed=false;
+  for(const [key,item] of Object.entries(G.inventory)){
+    const nextPrice=rollMarketPrice(key,item);
+    if(nextPrice!==item.basePrice){
+      item.basePrice=nextPrice;
+      changed=true;
+    }
+  }
+  return changed;
+}
+
+function isPriceOverOriginalLimit(item){
+  return item.price > item.basePrice*1.5;
+}
+
 function updateMoroBar(){
   const row=document.getElementById('moro-bar-row');
   const blk=document.getElementById('moro-tb-block');
   if(G.moroStage<1){row.style.display='none';blk.style.display='none';return;}
   row.style.display='flex'; blk.style.display='flex';
-  const goals=[1500,3000,4500];
-  const goal=goals[Math.min(G.moroStage-1,2)];
+  const goal=getMoroGoal();
   const pct=Math.min(G.moroPaid/goal*100,100);
   document.getElementById('moro-bar').style.width=pct+'%';
   document.getElementById('moro-bar-label').textContent=t('moro_progress');
@@ -665,6 +738,50 @@ function renderCustomer(){
   }
   document.getElementById('customer-name').textContent=c.name;
   document.getElementById('customer-request').textContent=c.request ?? c.text ?? '';
+}
+
+function getPriceMenuMarkup(){
+  const rows=Object.entries(G.inventory)
+    .filter(([,item])=>item.unlocked)
+    .map(([key,item])=>{
+      return `<div class="price-menu-row">
+        <div class="price-menu-info">
+          <div class="price-menu-name">${item.name}</div>
+          <div class="price-menu-meta">${t('price_menu_original')}: $${item.basePrice} · ${t('price_menu_current')}: $${item.price}</div>
+        </div>
+        <div class="price-menu-controls">
+          <button class="btn price-btn" onclick="changePrice('${key}',-1)">−</button>
+          <button class="btn price-btn" onclick="changePrice('${key}',1)">+</button>
+          <button class="btn price-btn" onclick="resetPrice('${key}')">${t('price_menu_reset')}</button>
+        </div>
+      </div>`;
+    }).join('');
+  return `<p class="price-menu-note">${t('price_menu_intro')}</p><div class="price-menu-list">${rows}</div>`;
+}
+
+function openPriceMenu(){
+  if(G.phase!=='day'||G.gameOver) return;
+  showDialogue(t('price_menu_title'),'var(--money)',getPriceMenuMarkup(),[
+    {label:t('price_menu_close'),cls:'',action:()=>{}}
+  ]);
+}
+
+function changePrice(key,delta){
+  if(G.phase!=='day'||G.gameOver) return;
+  const item=G.inventory[key];
+  if(!item||!item.unlocked) return;
+  item.price=Math.max(1,item.price+delta);
+  renderInventory();
+  openPriceMenu();
+}
+
+function resetPrice(key){
+  if(G.phase!=='day'||G.gameOver) return;
+  const item=G.inventory[key];
+  if(!item||!item.unlocked) return;
+  item.price=item.basePrice;
+  renderInventory();
+  openPriceMenu();
 }
 
 // ══════════════════════════════════════════
@@ -759,6 +876,7 @@ function generateCustomers(){
 // ══════════════════════════════════════════
 function startDay(){
   G.phase='day';
+  const marketShifted=G.day>1&&G.day%2===0&&updateMarketPrices();
 
   // Unlock human meat
   const unlockedHumanMeat=!G.inventory.human.unlocked && G.skullOrders>=2;
@@ -777,10 +895,13 @@ function startDay(){
     document.getElementById('btn-visit-moro').style.display='inline-block';
   }
 
-  // Restock
-  const normalRestock=4+Math.floor(G.day/2)+Math.floor(Math.random()*3);
-  G.inventory.normal.count  += normalRestock;
-  G.inventory.infected.count += Math.floor(1+Math.random()*2);
+  // Restock every 2 days with softer random gains
+  if(G.day%2===0){
+    const normalRestock=2+Math.floor(Math.random()*2)+(G.day>=6&&Math.random()<0.4?1:0);
+    const infectedRestock=1+(Math.random()<0.45?1:0);
+    G.inventory.normal.count  += normalRestock;
+    G.inventory.infected.count += infectedRestock;
+  }
 
   generateCustomers();
   document.getElementById('btn-hint').textContent=t('hint_sell');
@@ -795,6 +916,11 @@ function startDay(){
       :'<span style="color:var(--text-dim)">[ Плакат ZonTech на стене: «БЭЙХЭВЕН В БЕЗОПАСНОСТИ. ДОВЕРЯЙТЕ ПРОЦЕССУ.» ]</span>','log-lore');
   } else {
     log((LANG==='en'?'Day ':'День ')+G.day+(LANG==='en'?'. Open for business.':'. Лавка открыта.'),'log-system');
+    if(marketShifted){
+      log(LANG==='en'
+        ?'A morning market bulletin shifts meat prices across Bayhaven.'
+        :'Утренний рыночный бюллетень снова меняет цены на мясо по всему Бэйхэвену.','log-system');
+    }
 
     // Random lore drops
     const lore_en=[
@@ -859,6 +985,13 @@ function sellSelected(){
   const item=G.inventory[G.selectedMeat];
   if(item.count===0) return log((LANG==='en'?'Out of ':'Закончилось: ')+item.name+'.','log-bad');
   const c=G.currentCustomer;
+  if(isPriceOverOriginalLimit(item)){
+    log(LANG==='en'
+      ?`${c.name} grimaces. <em>"$${item.price} for ${item.name}? That's price gouging, Ray."</em>`
+      :`${c.name} кривится. <em>«$${item.price} за ${item.name}? Это уже грабёж, Рэй.»</em>`,'log-bad');
+    G.currentCustomer=null; updateUI(); nextCustomer();
+    return;
+  }
   if(!customerAccepts(c,G.selectedMeat)||(item.price>c.budget&&c.prefers==='cheap')){
     log(c.name+(LANG==='en'?' shakes their head.':' качает головой.'),'log-bad');
     skipCustomer(); return;
@@ -936,12 +1069,19 @@ function nightAction(action){
   } else if(action==='skull'){
     if(!G.skullOrderReady) return;
     const avail=G.inventory.human.count+G.inventory.infected.count;
+    if(G.inventory.human.count<1){
+      log(LANG==='en'
+        ?'Mr. Skull wants at least one Special Cut for this order. No substitutes.'
+        :'Мистеру Скуллу нужен хотя бы один Особый срез для этого заказа. Без замен.','log-bad');
+      return;
+    }
     if(avail<2){
       log(LANG==='en'?'Not enough supply for the order. Hunt first.':'Не хватает запасов для заказа. Сначала поохоться.','log-bad');
       return;
     }
     G.skullOrderReady=false;
-    let need=2;
+    G.inventory.human.count-=1;
+    let need=1;
     const useH=Math.min(G.inventory.human.count,need);
     G.inventory.human.count-=useH; need-=useH;
     G.inventory.infected.count-=need;
@@ -965,7 +1105,8 @@ function nightAction(action){
 // ══════════════════════════════════════════
 function visitMoro(){
   if(G.moroStage<1||G.moroStage>=4) return;
-  const canPay=G.money>=1500;
+  const stageCost=getMoroStageCost();
+  const canPay=G.money>=stageCost;
 
   const dialogues={
     en:{
@@ -973,24 +1114,24 @@ function visitMoro(){
         body:`<p>The clinic smells of formaldehyde and something worse. A thin man in a stained coat looks up from a microscope.</p>
 <p><em>"Ray. I know what you are. LARVE reanimated you — and left a chemical signature I can identify."</em></p>
 <p><em>"My name is Dr. Moro. I was a ZonTech consultant before the Breach. They know I have the antidote formula. That's why I'm still alive in this city."</em></p>
-<p><em>"I can synthesize an antidote. Three stages. $1,500 each. First I need reagents and a blood sample."</em></p>
-<p><span style="color:var(--text-dim)">Total: $4,500 across three payments. Current stage: $1,500.</span></p>`,
-        pay:'Pay $1,500 — Stage 1', later:'Come back later'
+<p><em>"I can synthesize an antidote. Three stages. First I need reagents and a blood sample. Stage one costs $1,000."</em></p>
+<p><span style="color:var(--text-dim)">Total: $4,250 across three payments. Current stage: $1,000.</span></p>`,
+        pay:'Pay $1,000 — Stage 1', later:'Come back later'
       },
       2:{
         body:`<p>Moro adjusts his glasses without looking up from his notes.</p>
 <p><em>"Blood analysis is complete. LARVE bonded to your neural tissue — that's why you retained cognition. Unusual case."</em></p>
 <p><em>"Stage two requires a synthetic compound. I need someone on the outside. Another $1,500."</em></p>
-<p><span style="color:var(--text-dim)">Current goal: $3,000 total.</span></p>`,
+<p><span style="color:var(--text-dim)">Current goal: $2,500 total.</span></p>`,
         pay:'Pay $1,500 — Stage 2', later:'Not yet'
       },
       3:{
         body:`<p>Moro holds a small vial to the light. Something shifts inside it.</p>
 <p><em>"The final synthesis is ready. Or close enough."</em></p>
 <p><em>"This compound will neutralize LARVE in your system — if it works as modeled."</em></p>
-<p><em>"I said 'if.' Don't look at me like that. $1,500. My last fee."</em></p>
-<p><span style="color:var(--text-dim)">Final payment. Total: $4,500.</span></p>`,
-        pay:'Pay $1,500 — Final Stage', later:'Not yet'
+<p><em>"I said 'if.' Don't look at me like that. $1,750. My last fee."</em></p>
+<p><span style="color:var(--text-dim)">Final payment. Total: $4,250.</span></p>`,
+        pay:'Pay $1,750 — Final Stage', later:'Not yet'
       }
     },
     ru:{
@@ -998,24 +1139,24 @@ function visitMoro(){
         body:`<p>Клиника пахнет формальдегидом и чем-то похуже. Худой мужчина в запятнанном халате поднимает взгляд от микроскопа.</p>
 <p><em>«Рэй. Я знаю, что ты такое. LARVE реанимировал тебя и оставил химическую сигнатуру, которую я умею читать.»</em></p>
 <p><em>«Меня зовут доктор Моро. До Прорыва я консультировал ZonTech. Они знают, что у меня есть формула антидота. Поэтому я ещё живу в этом городе.»</em></p>
-<p><em>«Я могу синтезировать антидот. Три этапа. По $1500 каждый. Сначала нужны реактивы и образец крови.»</em></p>
-<p><span style="color:var(--text-dim)">Итого: $4500 в три платежа. Текущий этап: $1500.</span></p>`,
-        pay:'Заплатить $1500 — Этап 1', later:'Вернуться позже'
+<p><em>«Я могу синтезировать антидот. Три этапа. Сначала нужны реактивы и образец крови. Первый этап стоит $1000.»</em></p>
+<p><span style="color:var(--text-dim)">Итого: $4250 в три платежа. Текущий этап: $1000.</span></p>`,
+        pay:'Заплатить $1000 — Этап 1', later:'Вернуться позже'
       },
       2:{
         body:`<p>Моро поправляет очки, не поднимая взгляда от записей.</p>
 <p><em>«Анализ крови готов. LARVE связался с нейронной тканью — поэтому ты сохранил рассудок. Необычный случай.»</em></p>
 <p><em>«Второй этап требует синтетического компонента. Нужно договориться с кем-то снаружи. Ещё $1500.»</em></p>
-<p><span style="color:var(--text-dim)">Текущая цель: суммарно $3000.</span></p>`,
+<p><span style="color:var(--text-dim)">Текущая цель: суммарно $2500.</span></p>`,
         pay:'Заплатить $1500 — Этап 2', later:'Ещё не сейчас'
       },
       3:{
         body:`<p>Моро держит маленький пузырёк на свету. Что-то внутри движется.</p>
 <p><em>«Финальный синтез готов. Или почти.»</em></p>
 <p><em>«Это вещество нейтрализует LARVE в твоей системе — если работает так, как в модели.»</em></p>
-<p><em>«Я сказал "если". Не смотри на меня так. $1500. Последний платёж.»</em></p>
-<p><span style="color:var(--text-dim)">Финальный платёж. Итого: $4500.</span></p>`,
-        pay:'Заплатить $1500 — Финальный этап', later:'Ещё не сейчас'
+<p><em>«Я сказал "если". Не смотри на меня так. $1750. Последний платёж.»</em></p>
+<p><span style="color:var(--text-dim)">Финальный платёж. Итого: $4250.</span></p>`,
+        pay:'Заплатить $1750 — Финальный этап', later:'Ещё не сейчас'
       }
     }
   };
@@ -1025,15 +1166,16 @@ function visitMoro(){
   if(canPay){
     btns.push({label:d.pay,cls:'btn-moro',action:()=>payMoro()});
   } else {
-    btns.push({label:LANG==='en'?'Need $1,500 (short by $'+(1500-G.money)+')':'Нужно $1500 (не хватает $'+(1500-G.money)+')',cls:'',action:()=>{}});
+    btns.push({label:LANG==='en'?'Need $'+stageCost+' (short by $'+(stageCost-G.money)+')':'Нужно $'+stageCost+' (не хватает $'+(stageCost-G.money)+')',cls:'',action:()=>{}});
   }
   btns.push({label:d.later,cls:'',action:()=>{}});
   showDialogue('Dr. Moro','var(--moro)',d.body,btns);
 }
 
 function payMoro(){
-  if(G.money<1500) return;
-  G.money-=1500; G.moroPaid+=1500; G.moroStage++;
+  const stageCost=getMoroStageCost();
+  if(G.money<stageCost) return;
+  G.money-=stageCost; G.moroPaid+=stageCost; G.moroStage++;
   if(G.moroStage===4){
     log(LANG==='en'
       ?'Dr. Moro hands you a small vial. Cold to the touch.'
